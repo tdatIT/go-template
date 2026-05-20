@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/labstack/echo/v5"
+
 	"github.com/tdatIT/go-template/config"
 	userApp "github.com/tdatIT/go-template/internal/app/user"
 	userHandler "github.com/tdatIT/go-template/internal/handler/user"

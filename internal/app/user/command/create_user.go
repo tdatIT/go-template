@@ -6,12 +6,13 @@ import (
 	"log/slog"
 	"strings"
 
+	"gorm.io/gorm"
+
 	"github.com/tdatIT/go-template/.agents/skills/go-clean-cqrs-architecture/references/decorator"
 	"github.com/tdatIT/go-template/internal/domain/dtos/userdtos"
 	"github.com/tdatIT/go-template/internal/domain/models"
 	"github.com/tdatIT/go-template/internal/infras/repository/user"
 	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
-	"gorm.io/gorm"
 )
 
 type ICreateUserCommand decorator.CommandReturnHandler[*userdtos.CreateUserReq, *userdtos.UserDTO]

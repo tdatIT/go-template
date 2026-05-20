@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v5"
+
 	"github.com/tdatIT/go-template/internal/domain/enums"
 	"github.com/tdatIT/go-template/pkgs/ultis/response"
 )

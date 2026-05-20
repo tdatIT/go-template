@@ -8,8 +8,9 @@ import (
 	"os/signal"
 	"sync"
 
-	server "github.com/tdatIT/go-template/internal"
 	_ "go.uber.org/automaxprocs"
+
+	server "github.com/tdatIT/go-template/internal"
 )
 
 func main() {

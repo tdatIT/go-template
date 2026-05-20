@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+
 	"github.com/tdatIT/go-template/config"
 	slogConfig "github.com/tdatIT/go-template/pkgs/logger"
 	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"

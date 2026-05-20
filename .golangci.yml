@@ -1,4 +1,4 @@
-version: 2
+version: "2"
 
 run:
   timeout: 5m
@@ -16,23 +16,24 @@ linters:
     - misspell
     - gocyclo
     - bodyclose
+  settings:
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: error-return
+        - name: error-strings
+    gocyclo:
+      min-complexity: 15
 
 formatters:
   enable:
     - goimports
-
-formatters-settings:
-  goimports:
-    local-prefixes: "github.com/tdatIT/go-template"
-
-linters-settings:
-  revive:
-    rules:
-      - name: exported
-  gocyclo:
-    min-complexity: 15
+  settings:
+    goimports:
+      local-prefixes:
+        - "github.com/tdatIT/go-template"
 
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0

@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/labstack/echo/v5"
+
 	"github.com/tdatIT/go-template/internal/handler/user"
 )
 

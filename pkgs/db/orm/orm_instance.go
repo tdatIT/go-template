@@ -5,10 +5,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/tdatIT/go-template/internal/domain/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
+
+	"github.com/tdatIT/go-template/internal/domain/models"
 )
 
 // ORM defines a interface for access the db.

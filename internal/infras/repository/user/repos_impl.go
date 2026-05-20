@@ -3,9 +3,10 @@ package user
 import (
 	"context"
 
+	"gorm.io/gorm"
+
 	"github.com/tdatIT/go-template/internal/domain/models"
 	"github.com/tdatIT/go-template/pkgs/db/orm"
-	"gorm.io/gorm"
 )
 
 type userReposImpl struct {
