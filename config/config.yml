@@ -1,0 +1,36 @@
+server:
+  debug: true
+  name: "go-template"
+  version: "0.1.0"
+  port: ":8080"
+  requestTimeout: "15s"
+  readTimeout: "5s"
+  writeTimeout: "10s"
+  ctxDefaultTimeout: "15s"
+
+database:
+  host: "localhost"
+  port: 5432
+  userName: "postgres"
+  password: "password"
+  database: "app_db"
+  schema: "public"
+  maxOpenConns: 25
+  maxIdleConns: 5
+  connMaxLifetime: "1h"
+  connMaxIdleTime: "10m"
+  options: ""
+  debug: false
+
+redis:
+  mode: "single"
+  username: ""
+  password: ""
+  masterName: ""
+  poolSize: 10
+  address:
+    - "127.0.0.1:6379"
+
+logger:
+  level: "info"
+  endcoding: "json"
