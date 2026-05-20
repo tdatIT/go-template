@@ -6,16 +6,20 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/tdatIT/go-template/config"
+	userApp "github.com/tdatIT/go-template/internal/app/user"
+	userHandler "github.com/tdatIT/go-template/internal/handler/user"
+	userRepos "github.com/tdatIT/go-template/internal/infras/repository/user"
+	"github.com/tdatIT/go-template/internal/router"
 	"github.com/tdatIT/go-template/pkgs/db/orm"
 	"github.com/tdatIT/go-template/pkgs/db/rdclient"
 	"github.com/tdatIT/go-template/pkgs/logger"
 )
 
 type Server struct {
-	cfg      *config.AppConfig
-	echo     *echo.Echo
-	database orm.ORM
-	redis    rdclient.RedisClient
+	cfg         *config.AppConfig
+	echo        *echo.Echo
+	database    orm.ORM
+	redisClient rdclient.RedisClient
 }
 
 func NewServer() *Server {
@@ -33,17 +37,24 @@ func NewServer() *Server {
 		true,
 	)))
 
-	//int echo
+	database := orm.NewDBConnection(cfg)
+	redisClient := rdclient.NewRedisClient(cfg)
+
 	echoApp := newHttpServer(cfg)
-	////db connection
-	//database := orm.NewDBConnection(cfg)
-	//redisDb := rdclient.NewRedisClient(cfg)
+
+	userRepository := userRepos.NewUserRepository(database)
+
+	userApplication := userApp.NewUserApplication(userRepository)
+
+	usrHandle := userHandler.NewUserHandler(userApplication)
+
+	router.RegisterRoutes(echoApp, usrHandle)
 
 	return &Server{
-		cfg:  cfg,
-		echo: echoApp,
-		//_database: database,
-		//_redis:    redisDb,
+		cfg:         cfg,
+		echo:        echoApp,
+		database:    database,
+		redisClient: redisClient,
 	}
 }
 
@@ -56,11 +67,15 @@ func (serv Server) Config() *config.AppConfig {
 }
 
 func (serv Server) Shutdown() {
-	if err := serv.database.Close(); err != nil {
-		slog.Error("failed to close database", slog.String("error", err.Error()))
+	if serv.database != nil {
+		if err := serv.database.Close(); err != nil {
+			slog.Error("failed to close database", slog.String("error", err.Error()))
+		}
 	}
 
-	if err := serv.redis.Close(); err != nil {
-		slog.Error("failed to close redis client", slog.String("error", err.Error()))
+	if serv.redisClient != nil {
+		if err := serv.redisClient.Close(); err != nil {
+			slog.Error("failed to close redis client", slog.String("error", err.Error()))
+		}
 	}
 }

@@ -6,17 +6,17 @@ type CommandHandler[T any] interface {
 	Handle(ctx context.Context, req T) error
 }
 
-func ApplyCommandDecorator[req any](base CommandHandler[req]) CommandHandler[req] {
-	return &commandDecorator[req]{base: base}
+func ApplyCommandDecorator[T any](base CommandHandler[T]) CommandHandler[T] {
+	return &commandDecorator[T]{base: base}
 }
 
 type commandDecorator[req any] struct {
 	base CommandHandler[req]
 }
 
-func (d *commandDecorator[T]) Handle(ctx context.Context, req T) error {
+func (d *commandDecorator[req]) Handle(ctx context.Context, input req) error {
 	// Pre-processing logic can be added here,
-	err := d.base.Handle(ctx, req)
+	err := d.base.Handle(ctx, input)
 	if err != nil {
 		// Handle error if needed
 		return err

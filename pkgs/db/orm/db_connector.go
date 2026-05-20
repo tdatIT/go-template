@@ -2,10 +2,10 @@ package orm
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
 
-	"github.com/bytedance/gopkg/util/logger"
 	"github.com/tdatIT/go-template/config"
-	"go.uber.org/zap"
 )
 
 func NewDBConnection(config *config.AppConfig) ORM {
@@ -33,13 +33,14 @@ func NewDBConnection(config *config.AppConfig) ORM {
 
 	conn, err := newGormInstance(cfg)
 	if err != nil {
-		logger.Fatal("error while creating db connection", zap.Error(err))
+		slog.Error("error while creating db connection", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
-	logger.Info("db connection established",
-		zap.String("host", fmt.Sprintf("%v:%v", config.Database.Host, config.Database.Port)),
-		zap.String("db", config.Database.Database),
-		zap.String("schema", config.Database.Schema),
+	slog.Info("db connection established",
+		slog.String("host", fmt.Sprintf("%v:%v", config.Database.Host, config.Database.Port)),
+		slog.String("db", config.Database.Database),
+		slog.String("schema", config.Database.Schema),
 	)
 
 	return conn

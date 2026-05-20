@@ -1,0 +1,38 @@
+version: 2
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    # Minimum recommended
+    - errcheck
+    - revive
+    - govet
+    - staticcheck
+    # Additional recommended
+    - gosec
+    - ineffassign
+    - misspell
+    - gocyclo
+    - bodyclose
+
+formatters:
+  enable:
+    - goimports
+
+formatters-settings:
+  goimports:
+    local-prefixes: "github.com/tdatIT/go-template"
+
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+  gocyclo:
+    min-complexity: 15
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

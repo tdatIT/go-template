@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/tdatIT/go-template/internal/domain/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
@@ -68,7 +69,9 @@ func newGormInstance(c Config) (ORM, error) {
 	}
 
 	// migration tables
-	err = db.AutoMigrate()
+	err = db.AutoMigrate(
+		&models.User{},
+	)
 	if err != nil {
 		slog.Error("auto migrate failed", slog.String("error", err.Error()))
 		return nil, err

@@ -12,7 +12,7 @@ database:
   host: "localhost"
   port: 5432
   userName: "postgres"
-  password: "password"
+  password: "123123@Admin"
   database: "app_db"
   schema: "public"
   maxOpenConns: 25
