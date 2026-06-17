@@ -5,12 +5,6 @@ import (
 )
 
 var (
-	ErrInternalServer = &Error{
-		Status:  500,
-		Code:    enums.Internal,
-		Message: "Internal server error",
-	}
-
 	ErrBadRequest = &Error{
 		Status:  400,
 		Code:    enums.InvalidArgument,
@@ -81,6 +75,12 @@ var (
 		Status:  405,
 		Code:    enums.MethodNotAllowed,
 		Message: "Method not allowed",
+	}
+
+	ErrInternalServer = &Error{
+		Status:  500,
+		Code:    enums.Internal,
+		Message: "Internal server error",
 	}
 
 	ErrNotImplemented = &Error{

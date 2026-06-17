@@ -25,10 +25,6 @@ func NewUpdateUserCommand(repo user.Repository) IUpdateUserCommand {
 }
 
 func (c *updateUserCommand) Handle(ctx context.Context, req *userdtos.UpdateUserReq) (*userdtos.UserDTO, error) {
-	if req.ID == 0 {
-		return nil, svcerr.ErrInvalidIdParam
-	}
-
 	if req.Name == nil && req.Email == nil {
 		return nil, svcerr.ErrInvalidParameters
 	}
@@ -43,19 +39,11 @@ func (c *updateUserCommand) Handle(ctx context.Context, req *userdtos.UpdateUser
 	}
 
 	if req.Name != nil {
-		name := strings.TrimSpace(*req.Name)
-		if name == "" {
-			return nil, svcerr.ErrInvalidParameters
-		}
-		model.Name = name
+		model.Name = strings.TrimSpace(*req.Name)
 	}
 
 	if req.Email != nil {
-		email := strings.TrimSpace(*req.Email)
-		if email == "" {
-			return nil, svcerr.ErrInvalidParameters
-		}
-		model.Email = email
+		model.Email = strings.TrimSpace(*req.Email)
 	}
 
 	if err := c.repo.Update(ctx, model); err != nil {

@@ -15,6 +15,21 @@ type AppConfig struct {
 	Database Database
 	Redis    Redis
 	Logger   Logger
+	Adapters Adapters
+}
+
+type Adapters struct {
+	ProductService HTTPClient
+}
+
+type HTTPClient struct {
+	BaseURL    string
+	Timeout    time.Duration
+	KeepAlive  time.Duration
+	RetryCount int
+	RetryWait  time.Duration
+	Debug      bool
+	APIKey     string
 }
 
 type Server struct {

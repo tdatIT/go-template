@@ -17,7 +17,7 @@ import (
 )
 
 func newHandler(repo *fakeRepo) *Handler {
-	return NewUserHandler(userapp.NewUserApplication(repo))
+	return NewUserHandler(userapp.NewUserApplication(repo, &fakeProductAdapter{}))
 }
 
 func TestHandlerCreateUser_Errors(t *testing.T) {

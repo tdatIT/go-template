@@ -22,17 +22,6 @@ func ptr[T any](v T) *T { return &v }
 func TestUpdateUserCommand_Handle(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("zero id is rejected before hitting the repo", func(t *testing.T) {
-		repo := repomock.NewMockRepository(t)
-
-		got, err := command.NewUpdateUserCommand(repo).
-			Handle(ctx, &userdtos.UpdateUserReq{ID: 0, Name: ptr("Alice")})
-
-		assert.Nil(t, got)
-		assert.ErrorIs(t, err, svcerr.ErrInvalidIdParam)
-		repo.AssertNotCalled(t, "FindByID")
-	})
-
 	t.Run("no fields to update is rejected before hitting the repo", func(t *testing.T) {
 		repo := repomock.NewMockRepository(t)
 
@@ -65,32 +54,6 @@ func TestUpdateUserCommand_Handle(t *testing.T) {
 
 		assert.Nil(t, got)
 		assert.ErrorIs(t, err, svcerr.ErrInternalServer)
-		repo.AssertNotCalled(t, "Update")
-	})
-
-	t.Run("blank name after trim is rejected after lookup", func(t *testing.T) {
-		repo := repomock.NewMockRepository(t)
-		repo.EXPECT().FindByID(mock.Anything, uint(1)).
-			Return(&models.User{ID: 1, Name: "Old", Email: "old@example.com"}, nil).Once()
-
-		got, err := command.NewUpdateUserCommand(repo).
-			Handle(ctx, &userdtos.UpdateUserReq{ID: 1, Name: ptr("   ")})
-
-		assert.Nil(t, got)
-		assert.ErrorIs(t, err, svcerr.ErrInvalidParameters)
-		repo.AssertNotCalled(t, "Update")
-	})
-
-	t.Run("blank email after trim is rejected after lookup", func(t *testing.T) {
-		repo := repomock.NewMockRepository(t)
-		repo.EXPECT().FindByID(mock.Anything, uint(1)).
-			Return(&models.User{ID: 1, Name: "Old", Email: "old@example.com"}, nil).Once()
-
-		got, err := command.NewUpdateUserCommand(repo).
-			Handle(ctx, &userdtos.UpdateUserReq{ID: 1, Email: ptr("  ")})
-
-		assert.Nil(t, got)
-		assert.ErrorIs(t, err, svcerr.ErrInvalidParameters)
 		repo.AssertNotCalled(t, "Update")
 	})
 

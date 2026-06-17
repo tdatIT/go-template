@@ -42,7 +42,23 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
-## 4. Goal-Driven Execution
+## 4. Validate Once at the Right Layer
+
+**Validate at the entry boundary. Trust layers below don't need to repeat it.**
+
+- The layer that first receives external input owns validation. For HTTP handlers that means the DTO + Echo validator. For consumers it means the message deserialization step.
+- **Application/service layers must NOT re-validate** what the caller already validated (nil checks, zero-value guards, required-field assertions). These checks add noise and imply distrust of the contract.
+- Only add validation in a deeper layer when there is **genuine business logic** that layer uniquely owns — e.g. a cross-field invariant, an external-system constraint, or a rule that no caller can pre-check.
+- Before adding any guard/check, ask: "has the caller already ensured this?" If yes, delete the check.
+
+Rule of thumb per layer in this project:
+| Layer | Validates |
+|---|---|
+| Handler | DTO binding + struct tags (required, min, format…) |
+| App | Business invariants only — never nil/zero-value re-checks |
+| Repository | Nothing — trusts the app layer |
+
+## 5. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
 

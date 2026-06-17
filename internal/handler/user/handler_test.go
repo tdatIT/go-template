@@ -14,6 +14,8 @@ import (
 	userapp "github.com/tdatIT/go-template/internal/app/user"
 	"github.com/tdatIT/go-template/internal/domain/dtos/userdtos"
 	"github.com/tdatIT/go-template/internal/domain/models"
+	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc"
+	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc/dto"
 	userrepo "github.com/tdatIT/go-template/internal/infras/repository/user"
 	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
 	"github.com/tdatIT/go-template/pkgs/ultis/validate"
@@ -64,6 +66,14 @@ func (f *fakeRepo) Delete(ctx context.Context, id uint) error {
 
 var _ userrepo.Repository = (*fakeRepo)(nil)
 
+type fakeProductAdapter struct{}
+
+func (f *fakeProductAdapter) GetListOfProducts(_ context.Context, _ *dto.GetListProductReq) (*dto.GetListProductResp, error) {
+	return &dto.GetListProductResp{}, nil
+}
+
+var _ productsvc.ServiceAdapter = (*fakeProductAdapter)(nil)
+
 type baseResPayload struct {
 	Code    int             `json:"code"`
 	Message string          `json:"message"`
@@ -93,7 +103,7 @@ func TestHandlerCreateUser(t *testing.T) {
 			return nil
 		},
 	}
-	app := userapp.NewUserApplication(repo)
+	app := userapp.NewUserApplication(repo, &fakeProductAdapter{})
 	handler := NewUserHandler(app)
 
 	_, ctx, rec := newJSONContext(http.MethodPost, "/api/v1/users", `{"name":"Alice","email":"alice@example.com"}`)
@@ -118,7 +128,7 @@ func TestHandlerUpdateUser(t *testing.T) {
 			return nil
 		},
 	}
-	app := userapp.NewUserApplication(repo)
+	app := userapp.NewUserApplication(repo, &fakeProductAdapter{})
 	handler := NewUserHandler(app)
 
 	_, ctx, rec := newJSONContext(http.MethodPut, "/api/v1/users/1", `{"name":"Bob","email":"bob@example.com"}`)
@@ -140,7 +150,7 @@ func TestHandlerDeleteUser(t *testing.T) {
 			return nil
 		},
 	}
-	app := userapp.NewUserApplication(repo)
+	app := userapp.NewUserApplication(repo, &fakeProductAdapter{})
 	handler := NewUserHandler(app)
 
 	_, ctx, rec := newJSONContext(http.MethodDelete, "/api/v1/users/1", "")
@@ -160,7 +170,7 @@ func TestHandlerGetUser(t *testing.T) {
 			return &models.User{ID: id, Name: "Alice", Email: "alice@example.com"}, nil
 		},
 	}
-	app := userapp.NewUserApplication(repo)
+	app := userapp.NewUserApplication(repo, &fakeProductAdapter{})
 	handler := NewUserHandler(app)
 
 	_, ctx, rec := newJSONContext(http.MethodGet, "/api/v1/users/1", "")
@@ -184,7 +194,7 @@ func TestHandlerListUsers(t *testing.T) {
 			}, 2, nil
 		},
 	}
-	app := userapp.NewUserApplication(repo)
+	app := userapp.NewUserApplication(repo, &fakeProductAdapter{})
 	handler := NewUserHandler(app)
 
 	_, ctx, rec := newJSONContext(http.MethodGet, "/api/v1/users?limit=10&offset=0", "")

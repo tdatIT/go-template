@@ -12,7 +12,6 @@ const (
 	PermissionDenied
 	Unauthenticated
 	ResourceExhausted
-	FailedPrecondition
 	Internal
 	RecordNotFound
 	Unavailable

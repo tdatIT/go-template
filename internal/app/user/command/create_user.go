@@ -31,10 +31,6 @@ func (c *createUserCommand) Handle(ctx context.Context, req *userdtos.CreateUser
 		Email: strings.TrimSpace(req.Email),
 	}
 
-	if model.Name == "" || model.Email == "" {
-		return nil, svcerr.ErrInvalidParameters
-	}
-
 	if err := c.repo.Create(ctx, model); err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, svcerr.ErrAlreadyExists

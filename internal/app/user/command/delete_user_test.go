@@ -19,15 +19,6 @@ import (
 func TestDeleteUserCommand_Handle(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("zero id is rejected before hitting the repo", func(t *testing.T) {
-		repo := repomock.NewMockRepository(t)
-
-		err := command.NewDeleteUserCommand(repo).Handle(ctx, &userdtos.DeleteUserReq{ID: 0})
-
-		assert.ErrorIs(t, err, svcerr.ErrInvalidIdParam)
-		repo.AssertNotCalled(t, "Delete")
-	})
-
 	t.Run("record not found maps to record-not-found", func(t *testing.T) {
 		repo := repomock.NewMockRepository(t)
 		repo.EXPECT().Delete(mock.Anything, uint(9)).Return(gorm.ErrRecordNotFound).Once()

@@ -34,3 +34,12 @@ redis:
 logger:
   level: "info"
   endcoding: "json"
+
+adapters:
+  product:
+    baseURL: "https://6a32d564c6ca2aee4385ac36.mockapi.io/api/v1/mock-svc"
+    timeout: "10s"
+    keepAlive: "90s"
+    retryCount: 3
+    retryWait: "500ms"
+    debug: false

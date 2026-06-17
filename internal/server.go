@@ -6,6 +6,8 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc"
+
 	"github.com/tdatIT/go-template/config"
 	userApp "github.com/tdatIT/go-template/internal/app/user"
 	userHandler "github.com/tdatIT/go-template/internal/handler/user"
@@ -45,7 +47,9 @@ func NewServer() *Server {
 
 	userRepository := userRepos.NewUserRepository(database)
 
-	userApplication := userApp.NewUserApplication(userRepository)
+	productAdapter := productsvc.NewAdapter(&cfg.Adapters.ProductService)
+
+	userApplication := userApp.NewUserApplication(userRepository, productAdapter)
 
 	usrHandle := userHandler.NewUserHandler(userApplication)
 

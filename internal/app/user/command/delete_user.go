@@ -24,10 +24,6 @@ func NewDeleteUserCommand(repo user.Repository) IDeleteUserCommand {
 }
 
 func (c *deleteUserCommand) Handle(ctx context.Context, req *userdtos.DeleteUserReq) error {
-	if req.ID == 0 {
-		return svcerr.ErrInvalidIdParam
-	}
-
 	if err := c.repo.Delete(ctx, req.ID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return svcerr.ErrRecordNotFound

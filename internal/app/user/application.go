@@ -3,6 +3,7 @@ package user
 import (
 	"github.com/tdatIT/go-template/internal/app/user/command"
 	"github.com/tdatIT/go-template/internal/app/user/query"
+	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc"
 	"github.com/tdatIT/go-template/internal/infras/repository/user"
 )
 
@@ -22,7 +23,10 @@ type Application struct {
 	Query   queries
 }
 
-func NewUserApplication(userRepo user.Repository) *Application {
+func NewUserApplication(
+	userRepo user.Repository,
+	productAdapter productsvc.ServiceAdapter,
+) *Application {
 	return &Application{
 		Command: commands{
 			CreateUser: command.NewCreateUserCommand(userRepo),
@@ -30,7 +34,7 @@ func NewUserApplication(userRepo user.Repository) *Application {
 			DeleteUser: command.NewDeleteUserCommand(userRepo),
 		},
 		Query: queries{
-			GetUser:   query.NewGetUserByIDQuery(userRepo),
+			GetUser:   query.NewGetUserByIDQuery(userRepo, productAdapter),
 			ListUsers: query.NewListUsersQuery(userRepo),
 		},
 	}

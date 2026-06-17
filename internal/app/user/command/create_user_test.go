@@ -46,20 +46,6 @@ func TestCreateUserCommand_Handle(t *testing.T) {
 		assert.Equal(t, "alice@example.com", got.Email)
 	})
 
-	t.Run("empty name is rejected before hitting the repo", func(t *testing.T) {
-		repo := repomock.NewMockRepository(t)
-
-		cmd := command.NewCreateUserCommand(repo)
-		got, err := cmd.Handle(ctx, &userdtos.CreateUserReq{
-			Name:  "   ",
-			Email: "alice@example.com",
-		})
-
-		assert.Nil(t, got)
-		assert.ErrorIs(t, err, svcerr.ErrInvalidParameters)
-		repo.AssertNotCalled(t, "Create")
-	})
-
 	t.Run("duplicate key maps to already-exists", func(t *testing.T) {
 		repo := repomock.NewMockRepository(t)
 		repo.EXPECT().

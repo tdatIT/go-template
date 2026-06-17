@@ -1,13 +1,27 @@
 package validate
 
 import (
+	"sync"
+
 	"github.com/go-playground/validator/v10"
 )
 
-var _validator *Validator
+var (
+	_validator *Validator
+	_once      sync.Once
+)
 
 type Validator struct {
 	Valid *validator.Validate
+}
+
+func GetValidator() *Validator {
+	_once.Do(func() {
+		_validator = &Validator{
+			Valid: validator.New(),
+		}
+	})
+	return _validator
 }
 
 func (v *Validator) Validate(i interface{}) error {
@@ -16,16 +30,4 @@ func (v *Validator) Validate(i interface{}) error {
 		return err
 	}
 	return nil
-}
-
-func GetValidator() *Validator {
-	if _validator != nil {
-		return _validator
-	}
-
-	_validator = &Validator{
-		Valid: validator.New(),
-	}
-
-	return _validator
 }

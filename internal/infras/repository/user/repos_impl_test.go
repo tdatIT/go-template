@@ -31,6 +31,10 @@ func newTestRepo(t *testing.T) (user.Repository, *gorm.DB) {
 	gdb, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, gdb.AutoMigrate(&models.User{}))
+	t.Cleanup(func() {
+		sqlDB, _ := gdb.DB()
+		_ = sqlDB.Close()
+	})
 	return user.NewUserRepository(sqliteORM{db: gdb}), gdb
 }
 
@@ -42,6 +46,10 @@ func newBrokenRepo(t *testing.T) user.Repository {
 	dbPath := filepath.Join(t.TempDir(), "broken.db")
 	gdb, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		sqlDB, _ := gdb.DB()
+		_ = sqlDB.Close()
+	})
 	return user.NewUserRepository(sqliteORM{db: gdb})
 }
 

@@ -25,7 +25,12 @@
 - **Error handling:** Use `pkgs/ultis/svcerr.Error` (or predefined errors in `pkgs/ultis/svcerr/common_err.go`) for application errors. Handlers return these errors directly so `ErrorHandlerEchoFn` maps them into the `pkgs/ultis/response.BaseRes` shape.
 - **Example:** Handler returns `svcerr.ErrBadRequest` on bind failures (`internal/handler/user/handler.go`).
 - **Responses:** Use `response.SuccessRes` / `response.ErrorRes` and call `.JSON(c)` to send consistent payloads (`pkgs/ultis/response/api_res_structure.go`).
-- **Validation:** Echo validator set in `internal/http.go` uses `validate.GetValidator()`; request DTOs use `validator` tags (see `internal/domain/dtos/userdtos/user_dto.go`).
+- **Validation — validate once, at the right layer (CRITICAL):**
+  - **Handler** is the sole entry-point validator for HTTP input. Bind the DTO and call `c.Validate(dto)`; struct tags (`required`, `min`, `email`, …) cover all basic field rules.
+  - **App layer must NOT repeat** nil-checks, zero-value guards, or required-field assertions that the handler already enforced. Trust the contract: if the app function is called, the input is already clean.
+  - **App layer may validate** only genuine business invariants that are impossible to express in struct tags — e.g. "end date must be after start date", "quota cannot exceed plan limit".
+  - **Repository layer validates nothing** — it trusts the app layer.
+  - Before writing any guard in app/repo, ask: *"could this have been caught above?"* If yes, delete it and fix the upper layer instead.
 - **Logging:** Structured JSON `slog` is configured in `internal/server.go` via `pkgs/logger.NewJsonSlogHandler`. Request logging is done with Echo's `RequestLoggerWithConfig` and a custom `LogValuesFunc` that emits `slog.Attr`.
 
 ## 4. Integrations & wiring patterns

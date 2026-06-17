@@ -41,13 +41,17 @@ type UserDTO struct {
 	Email     string    `json:"email"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	Products  []*struct {
+		ID        string `json:"id"`
+		Name      string `json:"name"`
+		PackageID string `json:"package_id"`
+	} `json:"products,omitempty"`
 }
 
 func NewUserDTO(user *models.User) *UserDTO {
 	if user == nil {
 		return nil
 	}
-
 	return &UserDTO{
 		ID:        user.ID,
 		Name:      user.Name,
