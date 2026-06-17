@@ -51,8 +51,6 @@ func TestErrorHandlerEchoFn_EchoHTTPError(t *testing.T) {
 }
 
 func TestErrorHandlerEchoFn_ValidationError(t *testing.T) {
-	t.Setenv("SERVER_DEBUG", "false")
-
 	type request struct {
 		Name string `validate:"required"`
 	}
@@ -71,7 +69,7 @@ func TestErrorHandlerEchoFn_ValidationError(t *testing.T) {
 	var payload errorPayload
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
 	require.Equal(t, enums.InvalidArgument, payload.Code)
-	require.Equal(t, "Invalid parameter", payload.Message)
+	require.Equal(t, "validation body error", payload.Message)
 }
 
 func TestErrorHandlerEchoFn_DefaultError(t *testing.T) {

@@ -17,22 +17,10 @@ var (
 		Message: "Bad request",
 	}
 
-	ErrMissingIdParam = &Error{
-		Status:  400,
-		Code:    enums.InvalidArgument,
-		Message: "Missing id param",
-	}
-
 	ErrInvalidIdParam = &Error{
 		Status:  400,
 		Code:    enums.InvalidArgument,
 		Message: "Invalid id param",
-	}
-
-	ErrNotChange = &Error{
-		Status:  200,
-		Code:    enums.Ok,
-		Message: "Not change",
 	}
 
 	ErrPermissionDenied = &Error{
@@ -45,12 +33,6 @@ var (
 		Status:  404,
 		Code:    enums.NotFound,
 		Message: "Not found",
-	}
-
-	ErrForbidden = &Error{
-		Status:  403,
-		Code:    enums.PermissionDenied,
-		Message: "Forbidden",
 	}
 
 	ErrRequestTimeout = &Error{
@@ -79,11 +61,11 @@ var (
 
 	ErrInvalidParameters = &Error{
 		Status:  400,
-		Code:    enums.FailedPrecondition,
+		Code:    enums.InvalidArgument,
 		Message: "Invalid parameters",
 	}
 
-	ErrTooManyRequest = &Error{
+	ErrTooManyRequests = &Error{
 		Status:  429,
 		Code:    enums.ResourceExhausted,
 		Message: "Too Many Requests",
@@ -99,5 +81,17 @@ var (
 		Status:  405,
 		Code:    enums.MethodNotAllowed,
 		Message: "Method not allowed",
+	}
+
+	ErrNotImplemented = &Error{
+		Status:  501,
+		Code:    enums.Unimplemented,
+		Message: "Not implemented",
+	}
+
+	ErrServiceUnavailable = &Error{
+		Status:  503,
+		Code:    enums.Unavailable,
+		Message: "Service unavailable",
 	}
 )

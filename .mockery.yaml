@@ -1,0 +1,17 @@
+# Mockery v3 configuration
+# Docs: https://vektra.github.io/mockery/latest/configuration/
+# Run: go tool mockery   (regenerate all mocks)
+template: testify
+formatter: goimports
+all: false
+dir: "{{.InterfaceDir}}/mock"
+filename: "{{.InterfaceName | snakecase}}_mock.go"
+pkgname: "mock"
+structname: "Mock{{.InterfaceName}}"
+
+# Low-level / infrastructure interfaces to mock.
+packages:
+  # Persistence layer (infras)
+  github.com/tdatIT/go-template/internal/infras/repository/user:
+    config:
+      all: true

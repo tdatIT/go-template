@@ -137,26 +137,21 @@ func TestComplicatedTable(t *testing.T) {
 
   for _, tt := range tests {
     t.Run(tt.give, func(t *testing.T) {
-      // setup mocks
-      ctrl := gomock.NewController(t)
-      xMock := xmock.NewMockX(ctrl)
+      // setup mocks (Mockery v3 / testify)
+      xMock := xmock.NewMockX(t)
       if tt.shouldCallX {
-        xMock.EXPECT().Call().Return(
-          tt.giveXResponse, tt.giveXErr,
-        )
+        xMock.EXPECT().Call().Return(tt.giveXResponse, tt.giveXErr)
       }
-      yMock := ymock.NewMockY(ctrl)
+      yMock := ymock.NewMockY(t)
       if tt.shouldCallY {
-        yMock.EXPECT().Call().Return(
-          tt.giveYResponse, tt.giveYErr,
-        )
+        yMock.EXPECT().Call().Return(tt.giveYResponse, tt.giveYErr)
       }
 
       got, err := DoComplexThing(tt.give, xMock, yMock)
 
       // verify results
       if tt.wantErr != nil {
-        require.EqualError(t, err, tt.wantErr.Error())
+        require.ErrorIs(t, err, tt.wantErr)
         return
       }
       require.NoError(t, err)
@@ -170,12 +165,11 @@ func TestComplicatedTable(t *testing.T) {
 
 ```go
 func TestShouldCallX(t *testing.T) {
-  // setup mocks
-  ctrl := gomock.NewController(t)
-  xMock := xmock.NewMockX(ctrl)
+  // setup mocks (Mockery v3 / testify) — NewMockX(t) auto-asserts on cleanup
+  xMock := xmock.NewMockX(t)
   xMock.EXPECT().Call().Return("XResponse", nil)
 
-  yMock := ymock.NewMockY(ctrl)
+  yMock := ymock.NewMockY(t)
 
   got, err := DoComplexThing("inputX", xMock, yMock)
 
@@ -185,14 +179,13 @@ func TestShouldCallX(t *testing.T) {
 
 func TestShouldCallYAndFail(t *testing.T) {
   // setup mocks
-  ctrl := gomock.NewController(t)
-  xMock := xmock.NewMockX(ctrl)
+  xMock := xmock.NewMockX(t)
 
-  yMock := ymock.NewMockY(ctrl)
+  yMock := ymock.NewMockY(t)
   yMock.EXPECT().Call().Return("YResponse", nil)
 
   _, err := DoComplexThing("inputY", xMock, yMock)
-  assert.EqualError(t, err, "Y failed")
+  assert.ErrorIs(t, err, errFailedY)
 }
 ```
 </td></tr>

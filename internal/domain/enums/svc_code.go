@@ -7,7 +7,7 @@ const (
 	DeadlineExceeded
 	NotFound
 	AlreadyExists
-	UnImplemented
+	Unimplemented
 	MethodNotAllowed
 	PermissionDenied
 	Unauthenticated
@@ -15,4 +15,5 @@ const (
 	FailedPrecondition
 	Internal
 	RecordNotFound
+	Unavailable
 )

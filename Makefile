@@ -4,7 +4,7 @@ BINARY_DIR ?= build
 BINARY_NAME ?= app-bin
 DOCKER_IMAGE ?= go-service:local
 
-.PHONY: help run build test lint fmt tidy docker-build clean
+.PHONY: help run build test lint fmt tidy docker-build clean mocks
 
 help:
 	@echo Available targets:
@@ -14,6 +14,7 @@ help:
 	@echo   make lint         - Run go vet
 	@echo   make fmt          - Run go fmt on all packages
 	@echo   make tidy         - Run go mod tidy
+	@echo   make mocks        - Regenerate mocks via mockery (.mockery.yaml)
 	@echo   make docker-build - Build Docker image $(DOCKER_IMAGE)
 	@echo   make clean        - Remove build artifacts
 
@@ -35,6 +36,9 @@ fmt:
 
 tidy:
 	go mod tidy
+
+mocks:
+	go tool mockery
 
 docker-build:
 	docker build -t $(DOCKER_IMAGE) .

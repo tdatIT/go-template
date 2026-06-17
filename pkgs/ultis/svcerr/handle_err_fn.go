@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v5"
@@ -33,15 +32,10 @@ func ErrorHandlerEchoFn(ctx *echo.Context, err error) {
 		msg.Message = customErr.Message
 	}
 
-	if validateErr, ok := errors.AsType[validator.ValidationErrors](err); ok {
+	if _, ok := errors.AsType[validator.ValidationErrors](err); ok {
 		msg.Status = http.StatusBadRequest
 		msg.Code = enums.InvalidArgument
-		if os.Getenv("SERVER_DEBUG") == "false" {
-			msg.Message = "Invalid parameter"
-		} else {
-			msg.Message = validateErr.Error()
-
-		}
+		msg.Message = "validation body error"
 	}
 
 	if resp, uErr := echo.UnwrapResponse(ctx.Response()); uErr == nil {
