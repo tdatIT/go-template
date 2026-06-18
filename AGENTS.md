@@ -4,6 +4,28 @@
 
 ---
 
+## 0. Start here — GUIDELINE.md
+
+> **Before writing a single line of code, read [`GUIDELINE.md`](./GUIDELINE.md).**
+
+`GUIDELINE.md` is the complete developer reference for this template. It contains:
+
+| Section | Read when |
+|---|---|
+| §1 Project Structure | Exploring the repo for the first time |
+| §2 Layer Contracts | Unsure which package a new file belongs in |
+| §3–§6 Domain / App / Handler / Worker | Implementing any feature end-to-end |
+| §7 Infrastructure | Adding a repository or outbound adapter |
+| §8 Shared Packages | Choosing a utility package |
+| §9 Configuration | Adding a new config key |
+| §10 Error Handling | Returning or creating an error |
+| §11 Implementing a New Domain | Replacing the `user` sample domain |
+| §12 Checklist | PR readiness review |
+
+This file (`AGENTS.md`) gives you a quick orientation. `GUIDELINE.md` gives you the full contract.
+
+---
+
 ## 1. Big picture (read first)
 
 - **Entry:** `cmd/main.go` creates `server.NewServer()` and starts Echo.

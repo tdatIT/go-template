@@ -16,6 +16,8 @@ type AppConfig struct {
 	Redis    Redis
 	Logger   Logger
 	Adapters Adapters
+	MQTT     MQTT
+	Workers  Workers
 }
 
 type Adapters struct {
@@ -71,6 +73,26 @@ type Redis struct {
 type Logger struct {
 	Level     string
 	Endcoding string
+}
+
+type MQTT struct {
+	Broker         string
+	ClientID       string
+	Username       string
+	Password       string
+	ConnectTimeout time.Duration
+	KeepAlive      time.Duration
+}
+
+// Workers holds configuration for all background workers.
+type Workers struct {
+	UserEvent WorkerConfig
+}
+
+// WorkerConfig holds the MQTT subscription settings for a single worker.
+type WorkerConfig struct {
+	Topic string
+	QoS   byte
 }
 
 func getDefaultConfig() string {

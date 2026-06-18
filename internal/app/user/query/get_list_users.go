@@ -21,7 +21,7 @@ func NewListUsersQuery(repo user.Repository) IListUsersQuery {
 }
 
 func (q *listUsersQuery) Handle(ctx context.Context, req *pagable.ListQuery) (*pagable.ListResponse, error) {
-	users, total, err := q.repo.FindAndCount(ctx, req.GetOffset(), req.GetPage())
+	users, total, err := q.repo.FindAndCount(ctx, req.GetSize(), req.GetOffset())
 	if err != nil {
 		slog.Error("list users failed", slog.String("error", err.Error()))
 		return nil, svcerr.ErrInternalServer
@@ -31,8 +31,8 @@ func (q *listUsersQuery) Handle(ctx context.Context, req *pagable.ListQuery) (*p
 		Items:   users,
 		Total:   int(total),
 		Page:    req.GetPage(),
-		Size:    0,
-		HasMore: req.GetHasMore(len(users)),
+		Size:    req.GetSize(),
+		HasMore: req.GetHasMore(int(total)),
 	}
 
 	return response, nil

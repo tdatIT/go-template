@@ -4,6 +4,21 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
+## 0. Project Guideline
+
+**Read `GUIDELINE.md` before implementing any feature.**
+
+`GUIDELINE.md` is the authoritative reference for this template. It covers:
+- Full directory structure and layer contracts
+- Exact patterns for models, DTOs, commands, queries, handlers, workers, repositories
+- Step-by-step checklist to implement a new domain end-to-end
+- Which files to delete and which to keep when replacing the sample `user` domain
+- Config, error handling, and response conventions
+
+Do not implement a feature, add a layer, or create a new domain before reading the relevant section.
+
+---
+
 ## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**

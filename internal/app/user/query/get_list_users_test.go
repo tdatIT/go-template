@@ -10,45 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/tdatIT/go-template/internal/app/user/query"
-	"github.com/tdatIT/go-template/internal/domain/dtos/userdtos"
 	"github.com/tdatIT/go-template/internal/domain/models"
 	repomock "github.com/tdatIT/go-template/internal/infras/repository/user/mock"
+	pagable "github.com/tdatIT/go-template/pkgs/ultis/paging"
 	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
 )
-
-func TestListUsersQuery_Handle_Pagination(t *testing.T) {
-	ctx := context.Background()
-
-	tests := []struct {
-		name       string
-		giveLimit  int
-		giveOffset int
-		wantLimit  int
-		wantOffset int
-	}{
-		{name: "defaults when limit is zero", giveLimit: 0, giveOffset: 0, wantLimit: 50, wantOffset: 0},
-		{name: "defaults when limit is negative", giveLimit: -5, giveOffset: 0, wantLimit: 50, wantOffset: 0},
-		{name: "clamps limit above max", giveLimit: 500, giveOffset: 10, wantLimit: 200, wantOffset: 10},
-		{name: "normalizes negative offset", giveLimit: 20, giveOffset: -3, wantLimit: 20, wantOffset: 0},
-		{name: "passes valid values through", giveLimit: 25, giveOffset: 5, wantLimit: 25, wantOffset: 5},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := repomock.NewMockRepository(t)
-			repo.EXPECT().
-				FindAndCount(mock.Anything, tt.wantLimit, tt.wantOffset).
-				Return([]*models.User{}, int64(0), nil).
-				Once()
-
-			res, err := query.NewListUsersQuery(repo).
-				Handle(ctx, &userdtos.ListUsersReq{Limit: tt.giveLimit, Offset: tt.giveOffset})
-
-			require.NoError(t, err)
-			require.NotNil(t, res)
-		})
-	}
-}
 
 func TestListUsersQuery_Handle(t *testing.T) {
 	ctx := context.Background()
@@ -59,37 +25,52 @@ func TestListUsersQuery_Handle(t *testing.T) {
 			{ID: 1, Name: "Alice", Email: "alice@example.com"},
 			{ID: 2, Name: "Bob", Email: "bob@example.com"},
 		}
-		repo.EXPECT().FindAndCount(mock.Anything, 50, 0).Return(users, int64(2), nil).Once()
+		// defaults: page=1, size=15 → FindAndCount(size=15, offset=0)
+		repo.EXPECT().FindAndCount(mock.Anything, 15, 0).Return(users, int64(2), nil).Once()
 
-		res, err := query.NewListUsersQuery(repo).Handle(ctx, &userdtos.ListUsersReq{})
+		res, err := query.NewListUsersQuery(repo).Handle(ctx, &pagable.ListQuery{})
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
-		assert.Equal(t, int64(2), res.Total)
-		require.Len(t, res.Items, 2)
-		assert.Equal(t, uint(1), res.Items[0].ID)
-		assert.Equal(t, "Alice", res.Items[0].Name)
-		assert.Equal(t, "Bob", res.Items[1].Name)
+		assert.Equal(t, 2, res.Total)
+		items := res.Items.([]*models.User)
+		require.Len(t, items, 2)
+		assert.Equal(t, uint(1), items[0].ID)
+		assert.Equal(t, "Alice", items[0].Name)
+		assert.Equal(t, "Bob", items[1].Name)
 	})
 
-	t.Run("empty result returns empty slice not nil", func(t *testing.T) {
+	t.Run("passes page and size to repo correctly", func(t *testing.T) {
 		repo := repomock.NewMockRepository(t)
-		repo.EXPECT().FindAndCount(mock.Anything, 50, 0).Return([]*models.User{}, int64(0), nil).Once()
+		// page=2, size=10 → offset=(2-1)*10=10
+		repo.EXPECT().FindAndCount(mock.Anything, 10, 10).Return([]*models.User{}, int64(25), nil).Once()
 
-		res, err := query.NewListUsersQuery(repo).Handle(ctx, &userdtos.ListUsersReq{})
+		res, err := query.NewListUsersQuery(repo).Handle(ctx, &pagable.ListQuery{Page: 2, Size: 10})
+
+		require.NoError(t, err)
+		assert.Equal(t, 25, res.Total)
+		assert.Equal(t, 2, res.Page)
+		assert.Equal(t, 10, res.Size)
+	})
+
+	t.Run("empty result returns empty slice", func(t *testing.T) {
+		repo := repomock.NewMockRepository(t)
+		repo.EXPECT().FindAndCount(mock.Anything, 15, 0).Return([]*models.User{}, int64(0), nil).Once()
+
+		res, err := query.NewListUsersQuery(repo).Handle(ctx, &pagable.ListQuery{})
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
-		assert.Equal(t, int64(0), res.Total)
-		assert.NotNil(t, res.Items)
-		assert.Empty(t, res.Items)
+		assert.Equal(t, 0, res.Total)
+		items := res.Items.([]*models.User)
+		assert.Empty(t, items)
 	})
 
 	t.Run("repo error maps to internal server", func(t *testing.T) {
 		repo := repomock.NewMockRepository(t)
-		repo.EXPECT().FindAndCount(mock.Anything, 50, 0).Return(nil, int64(0), errors.New("db down")).Once()
+		repo.EXPECT().FindAndCount(mock.Anything, 15, 0).Return(nil, int64(0), errors.New("db down")).Once()
 
-		res, err := query.NewListUsersQuery(repo).Handle(ctx, &userdtos.ListUsersReq{})
+		res, err := query.NewListUsersQuery(repo).Handle(ctx, &pagable.ListQuery{})
 
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, svcerr.ErrInternalServer)

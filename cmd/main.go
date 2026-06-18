@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
+	"syscall"
 
 	_ "go.uber.org/automaxprocs"
 
@@ -15,23 +17,37 @@ import (
 
 func main() {
 	fmt.Println("starting app...")
+
+	// ctx is cancelled on SIGINT / SIGTERM — propagated to Workers().StartGroup.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	serv := server.NewServer()
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
-		fmt.Println("gracefully shutting down...")
-		serv.Shutdown()
-	}()
 
 	var wg sync.WaitGroup
+
+	// HTTP component
 	wg.Go(func() {
 		if err := serv.API().Start(serv.Config().Server.Port); err != nil {
-			slog.Error("failed to start server", slog.String("error", err.Error()))
-			os.Exit(1)
+			slog.Error("http server stopped", slog.String("error", err.Error()))
 		}
 	})
 
+	// Worker component
+	wg.Go(func() {
+		if err := serv.Workers().StartGroup(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			slog.Error("worker group stopped with error", slog.String("error", err.Error()))
+		}
+	})
+
+	// Block until signal arrives, then start shutdown sequence.
+	<-ctx.Done()
+	stop() // release signal resources early
+
+	fmt.Println("gracefully shutting down...")
+	serv.Shutdown()
+
 	wg.Wait()
-	log.Println(" server shutdown successfully")
+	fmt.Println("server shutdown successfully")
+	os.Exit(0)
 }

@@ -8,11 +8,14 @@ server:
   writeTimeout: "10s"
   ctxDefaultTimeout: "15s"
 
+# Sensitive fields must be supplied via environment variables.
+# Viper maps "database.password" → DATABASE_PASSWORD, "database.userName" → DATABASE_USERNAME, etc.
+# Never commit real credentials to this file.
 database:
   host: "localhost"
   port: 5432
-  userName: "postgres"
-  password: "123123@Admin"
+  userName: ""        # override: DATABASE_USERNAME
+  password: ""        # override: DATABASE_PASSWORD
   database: "app_db"
   schema: "public"
   maxOpenConns: 25
@@ -24,8 +27,8 @@ database:
 
 redis:
   mode: "single"
-  username: ""
-  password: ""
+  username: ""        # override: REDIS_USERNAME
+  password: ""        # override: REDIS_PASSWORD
   masterName: ""
   poolSize: 10
   address:
@@ -35,6 +38,21 @@ logger:
   level: "info"
   endcoding: "json"
 
+mqtt:
+  broker: "tcp://localhost:1883"
+  clientID: "go-template"
+  username: ""          # override: MQTT_USERNAME
+  password: ""          # override: MQTT_PASSWORD
+  connectTimeout: "5s"
+  keepAlive: "30s"
+
+# Worker subscription settings.
+# Override via env: WORKERS_USEREVENT_TOPIC, WORKERS_USEREVENT_QOS, etc.
+workers:
+  userEvent:
+    topic: "events/user"
+    qos: 1
+
 adapters:
   product:
     baseURL: "https://6a32d564c6ca2aee4385ac36.mockapi.io/api/v1/mock-svc"
@@ -43,3 +61,4 @@ adapters:
     retryCount: 3
     retryWait: "500ms"
     debug: false
+    apiKey: ""        # override: ADAPTERS_PRODUCT_APIKEY

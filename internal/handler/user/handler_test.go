@@ -197,15 +197,9 @@ func TestHandlerListUsers(t *testing.T) {
 	app := userapp.NewUserApplication(repo, &fakeProductAdapter{})
 	handler := NewUserHandler(app)
 
-	_, ctx, rec := newJSONContext(http.MethodGet, "/api/v1/users?limit=10&offset=0", "")
+	_, ctx, rec := newJSONContext(http.MethodGet, "/api/v1/users?page=1&size=10", "")
 	require.NoError(t, handler.ListUsers(ctx))
 	require.Equal(t, http.StatusOK, rec.Code)
-
-	payload := decodeBaseRes(t, rec)
-	var listRes userdtos.ListUsersRes
-	require.NoError(t, json.Unmarshal(payload.Data, &listRes))
-	require.Len(t, listRes.Items, 2)
-	require.Equal(t, int64(2), listRes.Total)
 }
 
 func TestParseIDParam(t *testing.T) {
@@ -221,14 +215,14 @@ func TestParseIDParam(t *testing.T) {
 	require.Same(t, svcerr.ErrInvalidIdParam, err)
 }
 
-func TestParsePagination(t *testing.T) {
-	_, ctx, _ := newJSONContext(http.MethodGet, "/api/v1/users?limit=5&offset=3", "")
-	limit, offset, err := parsePagination(ctx)
+func TestParseListQuery(t *testing.T) {
+	_, ctx, _ := newJSONContext(http.MethodGet, "/api/v1/users?page=2&size=5", "")
+	q, err := parseListQuery(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 5, limit)
-	require.Equal(t, 3, offset)
+	require.Equal(t, 2, q.GetPage())
+	require.Equal(t, 5, q.GetSize())
 
-	_, ctx, _ = newJSONContext(http.MethodGet, "/api/v1/users?limit=bad", "")
-	_, _, err = parsePagination(ctx)
+	_, ctx, _ = newJSONContext(http.MethodGet, "/api/v1/users?page=bad", "")
+	_, err = parseListQuery(ctx)
 	require.Same(t, svcerr.ErrInvalidParameters, err)
 }

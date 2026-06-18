@@ -21,6 +21,15 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: go-template-mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:

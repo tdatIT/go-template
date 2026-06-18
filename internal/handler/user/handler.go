@@ -8,6 +8,7 @@ import (
 	"github.com/tdatIT/go-template/internal/domain/dtos/userdtos"
 	"github.com/tdatIT/go-template/pkgs/ultis/response"
 	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
+	pagable "github.com/tdatIT/go-template/pkgs/ultis/paging"
 
 	"github.com/labstack/echo/v5"
 )
@@ -108,16 +109,12 @@ func (h *Handler) GetUser(c *echo.Context) error {
 }
 
 func (h *Handler) ListUsers(c *echo.Context) error {
-	limit, offset, err := parsePagination(c)
+	q, err := parseListQuery(c)
 	if err != nil {
 		return err
 	}
 
-	req := userdtos.ListUsersReq{
-		Limit:  limit,
-		Offset: offset,
-	}
-	data, err := h.app.Query.ListUsers.Handle(c.Request().Context(), &req)
+	data, err := h.app.Query.ListUsers.Handle(c.Request().Context(), q)
 	if err != nil {
 		return err
 	}
@@ -137,25 +134,13 @@ func parseIDParam(c *echo.Context) (uint, error) {
 	return uint(id), nil
 }
 
-func parsePagination(c *echo.Context) (int, int, error) {
-	limit := 0
-	offset := 0
-
-	if raw := c.QueryParam("limit"); raw != "" {
-		parsed, err := strconv.Atoi(raw)
-		if err != nil {
-			return 0, 0, svcerr.ErrInvalidParameters
-		}
-		limit = parsed
+func parseListQuery(c *echo.Context) (*pagable.ListQuery, error) {
+	var q pagable.ListQuery
+	if err := q.SetPage(c.QueryParam("page")); err != nil {
+		return nil, svcerr.ErrInvalidParameters
 	}
-
-	if raw := c.QueryParam("offset"); raw != "" {
-		parsed, err := strconv.Atoi(raw)
-		if err != nil {
-			return 0, 0, svcerr.ErrInvalidParameters
-		}
-		offset = parsed
+	if err := q.SetSize(c.QueryParam("size")); err != nil {
+		return nil, svcerr.ErrInvalidParameters
 	}
-
-	return limit, offset, nil
+	return &q, nil
 }

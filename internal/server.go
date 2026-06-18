@@ -6,16 +6,20 @@ import (
 
 	"github.com/labstack/echo/v5"
 
-	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc"
+	"github.com/tdatIT/go-template/internal/worker/event"
 
 	"github.com/tdatIT/go-template/config"
 	userApp "github.com/tdatIT/go-template/internal/app/user"
 	userHandler "github.com/tdatIT/go-template/internal/handler/user"
+	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc"
+	"github.com/tdatIT/go-template/internal/infras/mqttpub"
 	userRepos "github.com/tdatIT/go-template/internal/infras/repository/user"
 	"github.com/tdatIT/go-template/internal/router"
+	"github.com/tdatIT/go-template/internal/worker"
 	"github.com/tdatIT/go-template/pkgs/db/orm"
 	"github.com/tdatIT/go-template/pkgs/db/rdclient"
 	"github.com/tdatIT/go-template/pkgs/logger"
+	mqttpkg "github.com/tdatIT/go-template/pkgs/mqtt"
 )
 
 type Server struct {
@@ -23,6 +27,8 @@ type Server struct {
 	echo        *echo.Echo
 	database    orm.ORM
 	redisClient rdclient.RedisClient
+	mqttClient  mqttpkg.Client
+	workerGroup *worker.WorkerGroup
 }
 
 func NewServer() *Server {
@@ -46,40 +52,69 @@ func NewServer() *Server {
 	echoApp := newHttpServer(cfg)
 
 	userRepository := userRepos.NewUserRepository(database)
-
 	productAdapter := productsvc.NewAdapter(&cfg.Adapters.ProductService)
-
 	userApplication := userApp.NewUserApplication(userRepository, productAdapter)
 
 	usrHandle := userHandler.NewUserHandler(userApplication)
-
 	router.RegisterRoutes(echoApp, usrHandle)
+
+	// WorkerGroup is always created; workers are only registered when MQTT is available.
+	workerGroup := worker.NewWorkerGroup()
+
+	mqttCli, conErr := mqttpkg.NewMQTTClient(cfg)
+	if conErr != nil {
+		slog.Warn("mqtt client unavailable, workers will not start", slog.String("error", conErr.Error()))
+	} else {
+		// Publisher is available for injection into the app layer when needed.
+		_ = mqttpub.NewPublisher(mqttCli)
+
+		// Register all topic workers here.
+		workerGroup.Register(
+			event.NewUserEventWorker(mqttCli, userApplication),
+		)
+	}
 
 	return &Server{
 		cfg:         cfg,
 		echo:        echoApp,
 		database:    database,
 		redisClient: redisClient,
+		mqttClient:  mqttCli,
+		workerGroup: workerGroup,
 	}
 }
 
-func (serv Server) API() *echo.Echo {
-	return serv.echo
+// API returns the Echo HTTP server component.
+func (s *Server) API() *echo.Echo {
+	return s.echo
 }
 
-func (serv Server) Config() *config.AppConfig {
-	return serv.cfg
+// Workers returns the WorkerGroup component for starting all registered workers.
+func (s *Server) Workers() *worker.WorkerGroup {
+	return s.workerGroup
 }
 
-func (serv Server) Shutdown() {
-	if serv.database != nil {
-		if err := serv.database.Close(); err != nil {
+// Config returns the loaded application configuration.
+func (s *Server) Config() *config.AppConfig {
+	return s.cfg
+}
+
+// Shutdown cleanly closes all infrastructure connections.
+// Workers are stopped by cancelling the context passed to Workers().StartGroup —
+// call that cancel before Shutdown to ensure a clean drain sequence.
+func (s *Server) Shutdown() {
+	if s.mqttClient != nil {
+		s.mqttClient.Disconnect()
+	}
+
+	if s.database != nil {
+		if err := s.database.Close(); err != nil {
 			slog.Error("failed to close database", slog.String("error", err.Error()))
 		}
 	}
 
-	if serv.redisClient != nil {
-		if err := serv.redisClient.Close(); err != nil {
+	if s.redisClient != nil {
+		if err := s.redisClient.Close(); err != nil {
 			slog.Error("failed to close redis client", slog.String("error", err.Error()))
 		}
 	}

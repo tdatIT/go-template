@@ -124,7 +124,7 @@ func TestHandlerGetUser_Errors(t *testing.T) {
 func TestHandlerListUsers_Errors(t *testing.T) {
 	t.Run("invalid pagination param", func(t *testing.T) {
 		h := newHandler(&fakeRepo{})
-		_, ctx, _ := newJSONContext(http.MethodGet, "/api/v1/users?offset=bad", "")
+		_, ctx, _ := newJSONContext(http.MethodGet, "/api/v1/users?page=bad", "")
 		err := h.ListUsers(ctx)
 		require.Same(t, svcerr.ErrInvalidParameters, err)
 	})

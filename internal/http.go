@@ -25,7 +25,6 @@ func newHttpServer(cfg *config.AppConfig) *echo.Echo {
 	e.Validator = validate.GetValidator()
 	e.Use(middleware.Recover())
 	e.Use(middleware.ContextTimeout(15 * time.Second))
-	e.Use(middleware.CSRF())
 	e.Use(middleware.RequestID())
 
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
