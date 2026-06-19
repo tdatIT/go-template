@@ -23,6 +23,13 @@ func newHttpServer(cfg *config.AppConfig) *echo.Echo {
 			false,
 		))
 	e.Validator = validate.GetValidator()
+
+	// Tracing is the outermost middleware so the request span wraps all others
+	// (including the request logger, which can then carry trace/span IDs).
+	if cfg.Tracing.Enabled {
+		e.Use(tracingMiddleware())
+	}
+
 	e.Use(middleware.Recover())
 	e.Use(middleware.ContextTimeout(15 * time.Second))
 	e.Use(middleware.RequestID())

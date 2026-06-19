@@ -53,6 +53,14 @@ workers:
     topic: "events/user"
     qos: 1
 
+# OpenTelemetry tracing (OTLP/gRPC exporter).
+# Override via env: TRACING_ENABLED, TRACING_ENDPOINT, TRACING_INSECURE, TRACING_SAMPLERATIO
+tracing:
+  enabled: false
+  endpoint: "localhost:4317"
+  insecure: true
+  sampleRatio: 1.0
+
 adapters:
   product:
     baseURL: "https://6a32d564c6ca2aee4385ac36.mockapi.io/api/v1/mock-svc"

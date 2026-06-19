@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/tdatIT/go-template/pkgs/db/rdclient"
 	"github.com/tdatIT/go-template/pkgs/logger"
 	mqttpkg "github.com/tdatIT/go-template/pkgs/mqtt"
+	"github.com/tdatIT/go-template/pkgs/tracing"
 )
 
 type Server struct {
@@ -29,6 +31,7 @@ type Server struct {
 	redisClient rdclient.RedisClient
 	mqttClient  mqttpkg.Client
 	workerGroup *worker.WorkerGroup
+	tracerStop  func(context.Context) error
 }
 
 func NewServer() *Server {
@@ -45,6 +48,24 @@ func NewServer() *Server {
 		},
 		true,
 	)))
+
+	// Tracing must be initialized before the HTTP server so the middleware
+	// (registered in newHttpServer) picks up the global TracerProvider/propagator.
+	var tracerStop func(context.Context) error
+	if cfg.Tracing.Enabled {
+		stop, traceErr := tracing.Init(context.Background(), tracing.Config{
+			Endpoint:       cfg.Tracing.Endpoint,
+			Insecure:       cfg.Tracing.Insecure,
+			SampleRatio:    cfg.Tracing.SampleRatio,
+			ServiceName:    cfg.Server.Name,
+			ServiceVersion: cfg.Server.Version,
+		})
+		if traceErr != nil {
+			slog.Error("failed to init tracing", slog.String("error", traceErr.Error()))
+			os.Exit(1)
+		}
+		tracerStop = stop
+	}
 
 	database := orm.NewDBConnection(cfg)
 	redisClient := rdclient.NewRedisClient(cfg)
@@ -81,6 +102,7 @@ func NewServer() *Server {
 		redisClient: redisClient,
 		mqttClient:  mqttCli,
 		workerGroup: workerGroup,
+		tracerStop:  tracerStop,
 	}
 }
 
@@ -105,6 +127,12 @@ func (s *Server) Config() *config.AppConfig {
 func (s *Server) Shutdown() {
 	if s.mqttClient != nil {
 		s.mqttClient.Disconnect()
+	}
+
+	if s.tracerStop != nil {
+		if err := s.tracerStop(context.Background()); err != nil {
+			slog.Error("failed to shutdown tracer", slog.String("error", err.Error()))
+		}
 	}
 
 	if s.database != nil {

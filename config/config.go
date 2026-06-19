@@ -18,6 +18,15 @@ type AppConfig struct {
 	Adapters Adapters
 	MQTT     MQTT
 	Workers  Workers
+	Tracing  Tracing
+}
+
+// Tracing holds OpenTelemetry trace exporter (OTLP/gRPC) settings.
+type Tracing struct {
+	Enabled     bool
+	Endpoint    string
+	Insecure    bool
+	SampleRatio float64
 }
 
 type Adapters struct {
