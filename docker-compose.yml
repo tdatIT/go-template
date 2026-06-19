@@ -21,15 +21,30 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
-  mosquitto:
-    image: eclipse-mosquitto:2
-    container_name: go-template-mosquitto
-    ports:
-      - "1883:1883"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: go-template-otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
-      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./config/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    restart: unless-stopped
+
+  emqx:
+    image: emqx:5
+    container_name: go-template-emqx
+    ports:
+      - "1883:1883"   # MQTT
+      - "8083:8083"   # MQTT over WebSocket
+      - "18083:18083" # Dashboard
+    volumes:
+      - emqx_data:/opt/emqx/data
     restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
+  emqx_data:

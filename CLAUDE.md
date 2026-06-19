@@ -6,9 +6,9 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 ## 0. Project Guideline
 
-**Read `GUIDELINE.md` before implementing any feature.**
+**Read `docs/GUIDELINE.md` before implementing any feature.**
 
-`GUIDELINE.md` is the authoritative reference for this template. It covers:
+`docs/GUIDELINE.md` is the authoritative reference for this template. It covers:
 - Full directory structure and layer contracts
 - Exact patterns for models, DTOs, commands, queries, handlers, workers, repositories
 - Step-by-step checklist to implement a new domain end-to-end

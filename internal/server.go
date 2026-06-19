@@ -11,6 +11,7 @@ import (
 
 	"github.com/tdatIT/go-template/config"
 	userApp "github.com/tdatIT/go-template/internal/app/user"
+	healthHandler "github.com/tdatIT/go-template/internal/handler/health"
 	userHandler "github.com/tdatIT/go-template/internal/handler/user"
 	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc"
 	"github.com/tdatIT/go-template/internal/infras/mqttpub"
@@ -77,7 +78,8 @@ func NewServer() *Server {
 	userApplication := userApp.NewUserApplication(userRepository, productAdapter)
 
 	usrHandle := userHandler.NewUserHandler(userApplication)
-	router.RegisterRoutes(echoApp, usrHandle)
+	healthHandle := healthHandler.NewHealthHandler(database, redisClient)
+	router.RegisterRoutes(echoApp, usrHandle, healthHandle)
 
 	// WorkerGroup is always created; workers are only registered when MQTT is available.
 	workerGroup := worker.NewWorkerGroup()

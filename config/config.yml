@@ -8,14 +8,11 @@ server:
   writeTimeout: "10s"
   ctxDefaultTimeout: "15s"
 
-# Sensitive fields must be supplied via environment variables.
-# Viper maps "database.password" → DATABASE_PASSWORD, "database.userName" → DATABASE_USERNAME, etc.
-# Never commit real credentials to this file.
-database:
+database: #for dev
   host: "localhost"
   port: 5432
-  userName: ""        # override: DATABASE_USERNAME
-  password: ""        # override: DATABASE_PASSWORD
+  userName: "postgres"
+  password: "123123@Admin"
   database: "app_db"
   schema: "public"
   maxOpenConns: 25
@@ -27,8 +24,8 @@ database:
 
 redis:
   mode: "single"
-  username: ""        # override: REDIS_USERNAME
-  password: ""        # override: REDIS_PASSWORD
+  username: ""
+  password: ""
   masterName: ""
   poolSize: 10
   address:
@@ -39,25 +36,21 @@ logger:
   endcoding: "json"
 
 mqtt:
-  broker: "tcp://localhost:1883"
+  broker: "tcp://localhost:1883"  # EMQX: tcp://localhost:1883
   clientID: "go-template"
   username: ""          # override: MQTT_USERNAME
   password: ""          # override: MQTT_PASSWORD
   connectTimeout: "5s"
   keepAlive: "30s"
 
-# Worker subscription settings.
-# Override via env: WORKERS_USEREVENT_TOPIC, WORKERS_USEREVENT_QOS, etc.
 workers:
   userEvent:
     topic: "events/user"
     qos: 1
 
-# OpenTelemetry tracing (OTLP/gRPC exporter).
-# Override via env: TRACING_ENABLED, TRACING_ENDPOINT, TRACING_INSECURE, TRACING_SAMPLERATIO
 tracing:
   enabled: false
-  endpoint: "localhost:4317"
+  endpoint: "localhost:4317" # otel-collector OTLP gRPC
   insecure: true
   sampleRatio: 1.0
 
@@ -68,5 +61,5 @@ adapters:
     keepAlive: "90s"
     retryCount: 3
     retryWait: "500ms"
+    apiKey: ""
     debug: false
-    apiKey: ""        # override: ADAPTERS_PRODUCT_APIKEY

@@ -28,7 +28,7 @@ type ListResponse struct {
 	Total   int  `json:"total"`
 	Page    int  `json:"page"`
 	Size    int  `json:"size"`
-	HasMore bool `json:"has_more"`
+	HasMore bool `json:"hasMore"`
 }
 
 // SetSize Set page size

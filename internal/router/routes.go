@@ -1,14 +1,21 @@
 package router
 
 import (
+	echoprometheus "github.com/labstack/echo-prometheus"
 	"github.com/labstack/echo/v5"
 
+	"github.com/tdatIT/go-template/internal/handler/health"
 	"github.com/tdatIT/go-template/internal/handler/user"
 )
 
 func RegisterRoutes(e *echo.Echo,
 	userHandler *user.Handler,
+	healthHandler *health.Handler,
 ) {
+	e.GET("/metrics", echoprometheus.NewHandler())
+	e.GET("/live", healthHandler.Live)
+	e.GET("/ready", healthHandler.Ready)
+
 	api := e.Group("/api")
 	v1 := api.Group("/v1")
 

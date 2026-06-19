@@ -6,7 +6,7 @@
 
 ## 0. Start here — GUIDELINE.md
 
-> **Before writing a single line of code, read [`GUIDELINE.md`](./GUIDELINE.md).**
+> **Before writing a single line of code, read [`GUIDELINE.md`](.docs/GUIDELINE.md).**
 
 `GUIDELINE.md` is the complete developer reference for this template. It contains:
 

@@ -73,6 +73,7 @@ func NewRedisClient(cfg *config.AppConfig) RedisClient {
 
 	if err := client.Ping(ctx).Err(); err != nil {
 		slog.Error("redis client ping failed", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
 	slog.Info("redis client connected successfully")

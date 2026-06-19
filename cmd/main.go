@@ -18,7 +18,6 @@ import (
 func main() {
 	fmt.Println("starting app...")
 
-	// ctx is cancelled on SIGINT / SIGTERM — propagated to Workers().StartGroup.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

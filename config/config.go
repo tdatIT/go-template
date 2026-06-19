@@ -11,14 +11,23 @@ import (
 )
 
 type AppConfig struct {
-	Server   Server
-	Database Database
-	Redis    Redis
-	Logger   Logger
-	Adapters Adapters
-	MQTT     MQTT
-	Workers  Workers
-	Tracing  Tracing
+	Server    Server
+	Database  Database
+	Redis     Redis
+	Logger    Logger
+	Adapters  Adapters
+	MQTT      MQTT
+	Workers   Workers
+	Tracing   Tracing
+	RateLimit RateLimit
+}
+
+// RateLimit holds configuration for the Echo rate limiter middleware.
+type RateLimit struct {
+	Enabled   bool
+	Rate      float64
+	Burst     int
+	ExpiresIn time.Duration
 }
 
 // Tracing holds OpenTelemetry trace exporter (OTLP/gRPC) settings.

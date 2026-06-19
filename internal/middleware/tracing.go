@@ -15,12 +15,9 @@ import (
 	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
 )
 
-const tracerName = "github.com/tdatIT/go-template/internal"
+const tracerName = "go-template/internal/middleware"
 
-// tracingMiddleware creates a server-side span per request for echo/v5.
-// It is the echo/v5 equivalent of the otelecho contrib middleware (which only
-// supports echo/v4) and relies on the global TracerProvider set by pkgs/tracing.
-func tracingMiddleware() echo.MiddlewareFunc {
+func TracingMiddleware() echo.MiddlewareFunc {
 	tracer := otel.Tracer(tracerName)
 	propagator := otel.GetTextMapPropagator()
 
@@ -32,7 +29,7 @@ func tracingMiddleware() echo.MiddlewareFunc {
 			route := c.RouteInfo().Path
 			spanName := route
 			if spanName == "" {
-				spanName = req.Method // unmatched route (404/405): avoid high-cardinality raw path
+				spanName = req.Method
 			}
 
 			ctx, span := tracer.Start(ctx, spanName,
@@ -58,7 +55,6 @@ func tracingMiddleware() echo.MiddlewareFunc {
 			if err != nil {
 				span.RecordError(err)
 			}
-			// Per OTel HTTP conventions, server spans are errors only on 5xx.
 			if status >= http.StatusInternalServerError {
 				span.SetStatus(codes.Error, http.StatusText(status))
 			}
@@ -68,9 +64,6 @@ func tracingMiddleware() echo.MiddlewareFunc {
 	}
 }
 
-// responseStatus resolves the HTTP status code for the span. When the handler
-// returns an error, Echo's HTTPErrorHandler writes the response above this
-// middleware, so the status is derived from the error instead of the writer.
 func responseStatus(c *echo.Context, err error) int {
 	if err == nil {
 		if resp, uErr := echo.UnwrapResponse(c.Response()); uErr == nil && resp.Status != 0 {
@@ -79,18 +72,15 @@ func responseStatus(c *echo.Context, err error) int {
 		return http.StatusOK
 	}
 
-	var svcErr *svcerr.Error
-	if errors.As(err, &svcErr) {
+	if svcErr, ok := errors.AsType[*svcerr.Error](err); ok {
 		return svcErr.Status
 	}
 
-	var echoErr *echo.HTTPError
-	if errors.As(err, &echoErr) {
+	if echoErr, ok := errors.AsType[*echo.HTTPError](err); ok {
 		return echoErr.Code
 	}
 
-	var validationErr validator.ValidationErrors
-	if errors.As(err, &validationErr) {
+	if _, ok := errors.AsType[validator.ValidationErrors](err); ok {
 		return http.StatusBadRequest
 	}
 

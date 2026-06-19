@@ -5,8 +5,11 @@ import (
 	"log/slog"
 	"time"
 
+	echoprometheus "github.com/labstack/echo-prometheus"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+
+	appmiddleware "github.com/tdatIT/go-template/internal/middleware"
 
 	"github.com/tdatIT/go-template/config"
 	slogConfig "github.com/tdatIT/go-template/pkgs/logger"
@@ -16,23 +19,39 @@ import (
 
 func newHttpServer(cfg *config.AppConfig) *echo.Echo {
 	e := echo.New()
+	e.Use(middleware.Recover())
+	e.Use(middleware.ContextTimeout(15 * time.Second))
+	e.Use(middleware.RequestID())
+	e.Validator = validate.GetValidator()
+
 	e.HTTPErrorHandler = svcerr.ErrorHandlerEchoFn
 	e.Logger = slog.New(
 		slogConfig.NewJsonSlogHandler(
 			&slogConfig.SlogConfig{ServiceName: cfg.Server.Name},
 			false,
 		))
-	e.Validator = validate.GetValidator()
 
-	// Tracing is the outermost middleware so the request span wraps all others
-	// (including the request logger, which can then carry trace/span IDs).
 	if cfg.Tracing.Enabled {
-		e.Use(tracingMiddleware())
+		e.Use(appmiddleware.TracingMiddleware())
 	}
 
-	e.Use(middleware.Recover())
-	e.Use(middleware.ContextTimeout(15 * time.Second))
-	e.Use(middleware.RequestID())
+	if cfg.RateLimit.Enabled {
+		store := middleware.NewRateLimiterMemoryStoreWithConfig(
+			middleware.RateLimiterMemoryStoreConfig{
+				Rate:      cfg.RateLimit.Rate,
+				Burst:     cfg.RateLimit.Burst,
+				ExpiresIn: cfg.RateLimit.ExpiresIn,
+			},
+		)
+		e.Use(middleware.RateLimiter(store))
+	}
+
+	e.Use(echoprometheus.NewMiddlewareWithConfig(echoprometheus.MiddlewareConfig{
+		Skipper: func(c *echo.Context) bool {
+			p := c.Request().URL.Path
+			return p == "/metrics" || p == "/live" || p == "/ready"
+		},
+	}))
 
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogStatus:       true,
@@ -46,7 +65,6 @@ func newHttpServer(cfg *config.AppConfig) *echo.Echo {
 		LogUserAgent:    true,
 		LogRemoteIP:     true,
 		LogValuesFunc: func(c *echo.Context, v middleware.RequestLoggerValues) error {
-			// common attributes collected for every request log
 			attrs := []slog.Attr{
 				slog.Int("status", v.Status),
 				slog.String("method", v.Method),
@@ -62,7 +80,6 @@ func newHttpServer(cfg *config.AppConfig) *echo.Echo {
 			if v.Error == nil {
 				slog.LogAttrs(context.Background(), slog.LevelInfo, "request success", attrs...)
 			} else {
-				// append error message for error logs
 				attrs = append(attrs, slog.String("error", v.Error.Error()))
 				slog.LogAttrs(context.Background(), slog.LevelError, "request error", attrs...)
 			}
