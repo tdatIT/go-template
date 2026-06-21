@@ -16,7 +16,7 @@ import (
 	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc"
 	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc/dto"
 	repomock "github.com/tdatIT/go-template/internal/infras/repository/user/mock"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
 )
 
 type fakeProductAdapter struct{}

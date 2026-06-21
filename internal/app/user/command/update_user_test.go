@@ -14,7 +14,7 @@ import (
 	"github.com/tdatIT/go-template/internal/domain/dtos/userdtos"
 	"github.com/tdatIT/go-template/internal/domain/models"
 	repomock "github.com/tdatIT/go-template/internal/infras/repository/user/mock"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
 )
 
 func ptr[T any](v T) *T { return &v }

@@ -12,8 +12,8 @@ import (
 	"github.com/tdatIT/go-template/internal/app/user/query"
 	"github.com/tdatIT/go-template/internal/domain/models"
 	repomock "github.com/tdatIT/go-template/internal/infras/repository/user/mock"
-	pagable "github.com/tdatIT/go-template/pkgs/ultis/paging"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
+	pagable "github.com/tdatIT/go-template/pkgs/utilities/paging"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
 )
 
 func TestListUsersQuery_Handle(t *testing.T) {

@@ -17,8 +17,8 @@ import (
 	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc"
 	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc/dto"
 	userrepo "github.com/tdatIT/go-template/internal/infras/repository/user"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
-	"github.com/tdatIT/go-template/pkgs/ultis/validate"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
+	"github.com/tdatIT/go-template/pkgs/utilities/validate"
 )
 
 type fakeRepo struct {

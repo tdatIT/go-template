@@ -13,7 +13,7 @@ import (
 	"github.com/tdatIT/go-template/internal/app/user/command"
 	"github.com/tdatIT/go-template/internal/domain/dtos/userdtos"
 	repomock "github.com/tdatIT/go-template/internal/infras/repository/user/mock"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
 )
 
 func TestDeleteUserCommand_Handle(t *testing.T) {

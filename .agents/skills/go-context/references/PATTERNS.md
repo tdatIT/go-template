@@ -69,7 +69,7 @@ func LoadConfig(ctx context.Context) (*Config, error) {
 ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 defer cancel()
 
-// Add cancellation — caller controls when to cancel
+// Add cancellation — httpclient controls when to cancel
 ctx, cancel := context.WithCancel(ctx)
 defer cancel()
 

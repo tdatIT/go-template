@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/tdatIT/go-template/pkgs/ultis/mapper"
+	"github.com/tdatIT/go-template/pkgs/utilities/mapper"
 )
 
 // Test for Copy function

@@ -6,16 +6,16 @@ import (
 
 	"github.com/tdatIT/go-template/config"
 	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc/dto"
-	"github.com/tdatIT/go-template/pkgs/caller"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
+	"github.com/tdatIT/go-template/pkgs/httpclient"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
 )
 
 type adapter struct {
-	caller caller.Caller
+	caller httpclient.Caller
 }
 
 func NewAdapter(cfg *config.HTTPClient) ServiceAdapter {
-	newCaller := caller.New(caller.Config{
+	newCaller := httpclient.New(httpclient.Config{
 		BaseURL:    cfg.BaseURL,
 		Timeout:    cfg.Timeout,
 		KeepAlive:  cfg.KeepAlive,

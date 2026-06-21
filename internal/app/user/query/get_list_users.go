@@ -6,8 +6,8 @@ import (
 
 	"github.com/tdatIT/go-template/.agents/skills/go-clean-cqrs-architecture/references/decorator"
 	"github.com/tdatIT/go-template/internal/infras/repository/user"
-	pagable "github.com/tdatIT/go-template/pkgs/ultis/paging"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
+	pagable "github.com/tdatIT/go-template/pkgs/utilities/paging"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
 )
 
 type IListUsersQuery decorator.QueryHandler[*pagable.ListQuery, *pagable.ListResponse]

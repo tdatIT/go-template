@@ -1,4 +1,4 @@
-package caller
+package httpclient
 
 import (
 	"net/http"

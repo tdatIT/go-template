@@ -24,7 +24,7 @@ type Config struct {
 }
 
 // Init configures the global TracerProvider and text-map propagator, then
-// returns a shutdown function that flushes pending spans. The caller owns the
+// returns a shutdown function that flushes pending spans. The httpclient owns the
 // returned shutdown and must invoke it during graceful termination.
 func Init(ctx context.Context, cfg Config) (func(context.Context) error, error) {
 	opts := []otlptracegrpc.Option{otlptracegrpc.WithEndpoint(cfg.Endpoint)}

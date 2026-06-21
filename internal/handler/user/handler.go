@@ -6,9 +6,9 @@ import (
 
 	"github.com/tdatIT/go-template/internal/app/user"
 	"github.com/tdatIT/go-template/internal/domain/dtos/userdtos"
-	"github.com/tdatIT/go-template/pkgs/ultis/response"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
-	pagable "github.com/tdatIT/go-template/pkgs/ultis/paging"
+	pagable "github.com/tdatIT/go-template/pkgs/utilities/paging"
+	"github.com/tdatIT/go-template/pkgs/utilities/response"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
 
 	"github.com/labstack/echo/v5"
 )

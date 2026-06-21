@@ -13,8 +13,8 @@ func RegisterRoutes(e *echo.Echo,
 	healthHandler *health.Handler,
 ) {
 	e.GET("/metrics", echoprometheus.NewHandler())
-	e.GET("/live", healthHandler.Live)
-	e.GET("/ready", healthHandler.Ready)
+	e.GET("/liveness", healthHandler.Live)
+	e.GET("/readiness", healthHandler.Ready)
 
 	api := e.Group("/api")
 	v1 := api.Group("/v1")

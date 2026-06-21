@@ -11,7 +11,7 @@ import (
 	"github.com/tdatIT/go-template/.agents/skills/go-clean-cqrs-architecture/references/decorator"
 	"github.com/tdatIT/go-template/internal/domain/dtos/userdtos"
 	"github.com/tdatIT/go-template/internal/infras/repository/user"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
 )
 
 type IUpdateUserCommand decorator.CommandReturnHandler[*userdtos.UpdateUserReq, *userdtos.UserDTO]

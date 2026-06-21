@@ -488,7 +488,7 @@ Use existing errors before creating new ones:
 ### Adding a new error
 
 ```go
-// pkgs/ultis/svcerr/common_err.go
+// pkgs/utilities/svcerr/common_err.go
 ErrQuotaExceeded = &Error{
     Status:  402,
     Code:    enums.ResourceExhausted,

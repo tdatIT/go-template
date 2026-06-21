@@ -13,7 +13,7 @@ import (
 
 	userapp "github.com/tdatIT/go-template/internal/app/user"
 	"github.com/tdatIT/go-template/internal/domain/models"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
 )
 
 func newHandler(repo *fakeRepo) *Handler {

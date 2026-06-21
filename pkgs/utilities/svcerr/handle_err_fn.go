@@ -10,7 +10,7 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"github.com/tdatIT/go-template/internal/domain/enums"
-	"github.com/tdatIT/go-template/pkgs/ultis/response"
+	"github.com/tdatIT/go-template/pkgs/utilities/response"
 )
 
 func ErrorHandlerEchoFn(ctx *echo.Context, err error) {

@@ -13,8 +13,8 @@ import (
 
 	"github.com/tdatIT/go-template/config"
 	slogConfig "github.com/tdatIT/go-template/pkgs/logger"
-	"github.com/tdatIT/go-template/pkgs/ultis/svcerr"
-	"github.com/tdatIT/go-template/pkgs/ultis/validate"
+	"github.com/tdatIT/go-template/pkgs/utilities/svcerr"
+	"github.com/tdatIT/go-template/pkgs/utilities/validate"
 )
 
 func newHttpServer(cfg *config.AppConfig) *echo.Echo {
