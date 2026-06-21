@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	echoprometheus "github.com/labstack/echo-prometheus"
 	"github.com/labstack/echo/v5"
@@ -20,16 +19,18 @@ import (
 func newHttpServer(cfg *config.AppConfig) *echo.Echo {
 	e := echo.New()
 	e.Use(middleware.Recover())
-	e.Use(middleware.ContextTimeout(15 * time.Second))
+	e.Use(middleware.ContextTimeout(cfg.Server.CtxDefaultTimeout))
 	e.Use(middleware.RequestID())
 	e.Validator = validate.GetValidator()
 
 	e.HTTPErrorHandler = svcerr.ErrorHandlerEchoFn
-	e.Logger = slog.New(
-		slogConfig.NewJsonSlogHandler(
-			&slogConfig.SlogConfig{ServiceName: cfg.Server.Name},
-			false,
-		))
+	e.Logger = slogConfig.NewSlogLogger(
+		&slogConfig.SlogConfig{
+			Format:      cfg.Logger.Format,
+			ServiceName: cfg.Server.Name,
+		},
+		false,
+	)
 
 	if cfg.Tracing.Enabled {
 		e.Use(appmiddleware.TracingMiddleware())

@@ -8,7 +8,7 @@ server:
   writeTimeout: "10s"
   ctxDefaultTimeout: "15s"
 
-database: #for dev
+database:
   host: "localhost"
   port: 5432
   userName: "postgres"
@@ -36,10 +36,10 @@ logger:
   endcoding: "json"
 
 mqtt:
-  broker: "tcp://localhost:1883"  # EMQX: tcp://localhost:1883
+  broker: "tcp://localhost:1883"
   clientID: "go-template"
-  username: ""          # override: MQTT_USERNAME
-  password: ""          # override: MQTT_PASSWORD
+  username: ""
+  password: ""
   connectTimeout: "5s"
   keepAlive: "30s"
 
@@ -50,7 +50,7 @@ workers:
 
 tracing:
   enabled: false
-  endpoint: "localhost:4317" # otel-collector OTLP gRPC
+  endpoint: "localhost:4317"
   insecure: true
   sampleRatio: 1.0
 

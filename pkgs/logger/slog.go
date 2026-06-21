@@ -9,31 +9,53 @@ import (
 type SlogConfig struct {
 	Level       string
 	ServiceName string
+	Format      string // "json" or "console"
 }
 
-func NewJsonSlogHandler(config *SlogConfig, sourceInfo bool) *slog.JSONHandler {
+// applyDefaults applies default values to the SlogConfig if they are not set.
+func applyDefaults(config *SlogConfig) *SlogConfig {
 	if config == nil {
-		config = &SlogConfig{
-			Level:       "info",
-			ServiceName: "service",
-		}
+		config = &SlogConfig{}
 	}
+
 	if config.Level == "" {
 		config.Level = "info"
 	}
 
-	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	if config.ServiceName == "" {
+		config.ServiceName = "backend-service"
+	}
+
+	return config
+}
+
+// NewSlogLogger is the common entry point that returns a ready *slog.Logger
+// emitting either JSON or console text output based on config.Format.
+func NewSlogLogger(config *SlogConfig, sourceInfo bool) *slog.Logger {
+	return slog.New(NewSlogHandler(config, sourceInfo))
+}
+
+// NewSlogHandler creates a slog.Handler based on the provided SlogConfig.
+// Format "console" yields a text handler; anything else (default) yields JSON.
+func NewSlogHandler(config *SlogConfig, sourceInfo bool) slog.Handler {
+	config = applyDefaults(config)
+
+	opts := &slog.HandlerOptions{
 		Level:     parseSlogLevel(config.Level),
 		AddSource: sourceInfo,
-	})
+	}
 
-	if config.ServiceName == "" {
-		config.ServiceName = "backend-go"
+	var handler slog.Handler
+	switch strings.ToLower(config.Format) {
+	case "console", "text":
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	default: // default to JSON format
+		handler = slog.NewJSONHandler(os.Stdout, opts)
 	}
 
 	return handler.WithAttrs([]slog.Attr{
 		slog.String("service_name", config.ServiceName),
-	}).(*slog.JSONHandler)
+	})
 }
 
 func parseSlogLevel(level string) slog.Level {

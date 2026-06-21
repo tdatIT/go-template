@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"log/slog"
-	"os"
 
 	"github.com/labstack/echo/v5"
 
@@ -35,20 +34,20 @@ type Server struct {
 	tracerStop  func(context.Context) error
 }
 
-func NewServer() *Server {
+func NewServer() (*Server, error) {
 	cfg, err := config.NewConfig()
 	if err != nil {
-		slog.Error("failed to load config", slog.String("error", err.Error()))
-		os.Exit(1)
+		return nil, err
 	}
 
-	slog.SetDefault(slog.New(logger.NewJsonSlogHandler(
+	slog.SetDefault(logger.NewSlogLogger(
 		&logger.SlogConfig{
 			Level:       cfg.Logger.Level,
+			Format:      cfg.Logger.Format,
 			ServiceName: cfg.Server.Name,
 		},
 		true,
-	)))
+	))
 
 	// Tracing must be initialized before the HTTP server so the middleware
 	// (registered in newHttpServer) picks up the global TracerProvider/propagator.
@@ -62,14 +61,20 @@ func NewServer() *Server {
 			ServiceVersion: cfg.Server.Version,
 		})
 		if traceErr != nil {
-			slog.Error("failed to init tracing", slog.String("error", traceErr.Error()))
-			os.Exit(1)
+			return nil, traceErr
 		}
 		tracerStop = stop
 	}
 
-	database := orm.NewDBConnection(cfg)
-	redisClient := rdclient.NewRedisClient(cfg)
+	database, err := orm.NewDBConnection(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	redisClient, err := rdclient.NewRedisClient(cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	echoApp := newHttpServer(cfg)
 
@@ -84,9 +89,9 @@ func NewServer() *Server {
 	// WorkerGroup is always created; workers are only registered when MQTT is available.
 	workerGroup := worker.NewWorkerGroup()
 
-	mqttCli, conErr := mqttpkg.NewMQTTClient(cfg)
-	if conErr != nil {
-		slog.Warn("mqtt client unavailable, workers will not start", slog.String("error", conErr.Error()))
+	mqttCli, err := mqttpkg.NewMQTTClient(cfg)
+	if err != nil {
+		return nil, err
 	} else {
 		// Publisher is available for injection into the app layer when needed.
 		_ = mqttpub.NewPublisher(mqttCli)
@@ -105,7 +110,7 @@ func NewServer() *Server {
 		mqttClient:  mqttCli,
 		workerGroup: workerGroup,
 		tracerStop:  tracerStop,
-	}
+	}, nil
 }
 
 // API returns the Echo HTTP server component.
@@ -124,8 +129,6 @@ func (s *Server) Config() *config.AppConfig {
 }
 
 // Shutdown cleanly closes all infrastructure connections.
-// Workers are stopped by cancelling the context passed to Workers().StartGroup —
-// call that cancel before Shutdown to ensure a clean drain sequence.
 func (s *Server) Shutdown() {
 	if s.mqttClient != nil {
 		s.mqttClient.Disconnect()

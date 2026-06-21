@@ -30,12 +30,15 @@ func TestParseSlogLevel(t *testing.T) {
 	}
 }
 
-func TestNewJsonSlogHandler(t *testing.T) {
-	handler := NewJsonSlogHandler(nil, false)
-	require.NotNil(t, handler)
-	require.True(t, handler.Enabled(context.Background(), slog.LevelInfo))
+func TestNewSlogHandler(t *testing.T) {
+	jsonHandler := NewSlogHandler(nil, false)
+	require.IsType(t, &slog.JSONHandler{}, jsonHandler)
+	require.True(t, jsonHandler.Enabled(context.Background(), slog.LevelInfo))
 
-	handler = NewJsonSlogHandler(&SlogConfig{Level: "error"}, false)
-	require.False(t, handler.Enabled(context.Background(), slog.LevelInfo))
-	require.True(t, handler.Enabled(context.Background(), slog.LevelError))
+	consoleHandler := NewSlogHandler(&SlogConfig{Format: "console"}, false)
+	require.IsType(t, &slog.TextHandler{}, consoleHandler)
+
+	errHandler := NewSlogHandler(&SlogConfig{Level: "error"}, false)
+	require.False(t, errHandler.Enabled(context.Background(), slog.LevelInfo))
+	require.True(t, errHandler.Enabled(context.Background(), slog.LevelError))
 }

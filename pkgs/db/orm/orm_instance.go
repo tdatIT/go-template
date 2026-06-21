@@ -7,9 +7,8 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
-
-	"github.com/tdatIT/go-template/internal/domain/models"
 )
 
 // ORM defines a interface for access the db.
@@ -22,12 +21,15 @@ type ORM interface {
 // Config GORM Config
 type Config struct {
 	Debug           bool
-	DBType          string
 	DSN             string
 	MaxOpenConns    int
 	MaxIdleConns    int
 	ConnMaxLifetime time.Duration
 	ConnMaxIdleTime time.Duration
+	// Logger, when set, routes GORM logs through the given slog logger.
+	Logger *slog.Logger
+	// SlowThreshold flags queries slower than this as slow (0 = default 200ms).
+	SlowThreshold time.Duration
 }
 
 type ormImpl struct {
@@ -43,14 +45,19 @@ func newGormInstance(c Config) (ORM, error) {
 		},
 	}
 
+	if c.Logger != nil {
+		level := gormlogger.Warn
+		if c.Debug {
+			level = gormlogger.Info
+		}
+		gConfig.Logger = newGormLogger(c.Logger, level, c.SlowThreshold)
+	}
+
 	db, err := gorm.Open(dial, gConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	if c.Debug {
-		db = db.Debug()
-	}
 	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, err
@@ -59,23 +66,17 @@ func newGormInstance(c Config) (ORM, error) {
 	if c.MaxOpenConns != 0 {
 		sqlDB.SetMaxOpenConns(c.MaxOpenConns)
 	}
+
 	if c.ConnMaxLifetime != 0 {
 		sqlDB.SetConnMaxLifetime(c.ConnMaxLifetime)
 	}
+
 	if c.MaxIdleConns != 0 {
 		sqlDB.SetMaxIdleConns(c.MaxIdleConns)
 	}
+
 	if c.ConnMaxIdleTime != 0 {
 		sqlDB.SetConnMaxIdleTime(c.ConnMaxIdleTime)
-	}
-
-	// migration tables
-	err = db.AutoMigrate(
-		&models.User{},
-	)
-	if err != nil {
-		slog.Error("auto migrate failed", slog.String("error", err.Error()))
-		return nil, err
 	}
 
 	return &ormImpl{

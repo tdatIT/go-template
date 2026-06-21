@@ -21,7 +21,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	serv := server.NewServer()
+	serv, err := server.NewServer()
+	if err != nil {
+		slog.Error("error while creating server", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 
 	var wg sync.WaitGroup
 

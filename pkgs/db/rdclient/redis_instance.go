@@ -2,8 +2,8 @@ package rdclient
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -28,10 +28,10 @@ func (r *redisClient) Close() error {
 	return r._client.Close()
 }
 
-func NewRedisClient(cfg *config.AppConfig) RedisClient {
+func NewRedisClient(cfg *config.AppConfig) (RedisClient, error) {
 	if len(cfg.Redis.Address) == 0 {
 		slog.Error("redis address list is empty")
-		os.Exit(1)
+		return nil, fmt.Errorf("redis address list is empty")
 	}
 
 	connOpts := redis.UniversalOptions{
@@ -49,17 +49,18 @@ func NewRedisClient(cfg *config.AppConfig) RedisClient {
 	case "cluster": // Cluster mode relies on multiple node addresses
 		if len(connOpts.Addrs) == 0 {
 			slog.Error("redis cluster mode requires at least one node address")
-			os.Exit(1)
+			return nil, fmt.Errorf("redis cluster mode requires at least one node address")
 		}
 	case "sentinel": // Sentinel mode requires master name and sentinel addresses
 		if cfg.Redis.MasterName == "" {
 			slog.Error("redis sentinel mode requires a master name")
-			os.Exit(1)
+			return nil, fmt.Errorf("redis sentinel mode requires a master name")
 		}
 		connOpts.MasterName = cfg.Redis.MasterName
 	default:
 		if len(connOpts.Addrs) == 0 { // Treat any other value as standalone
 			slog.Error("redis standalone mode requires a node address")
+			return nil, fmt.Errorf("redis standalone mode requires a node address")
 		}
 		// Ensure only the primary address is used for standalone setups
 		connOpts.Addrs = []string{connOpts.Addrs[0]}
@@ -73,12 +74,16 @@ func NewRedisClient(cfg *config.AppConfig) RedisClient {
 
 	if err := client.Ping(ctx).Err(); err != nil {
 		slog.Error("redis client ping failed", slog.String("error", err.Error()))
-		os.Exit(1)
+		return nil, fmt.Errorf("redis client ping failed: %w", err)
 	}
 
-	slog.Info("redis client connected successfully")
+	slog.Info("redis connection created",
+		slog.String("mode", cfg.Redis.Mode),
+		slog.Any("addresses", cfg.Redis.Address),
+		slog.String("master_name", cfg.Redis.MasterName),
+	)
 
 	return &redisClient{
 		_client: client,
-	}
+	}, nil
 }

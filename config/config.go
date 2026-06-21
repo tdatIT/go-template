@@ -89,8 +89,8 @@ type Redis struct {
 }
 
 type Logger struct {
-	Level     string
-	Endcoding string
+	Level  string
+	Format string // "json" or "console"
 }
 
 type MQTT struct {

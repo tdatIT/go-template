@@ -1,5 +1,3 @@
-// Package tracing wires the OpenTelemetry trace SDK to an OTLP/gRPC exporter.
-// It contains no business logic and is reusable across services.
 package tracing
 
 import (
