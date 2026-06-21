@@ -22,22 +22,6 @@ type AppConfig struct {
 	RateLimit RateLimit
 }
 
-// RateLimit holds configuration for the Echo rate limiter middleware.
-type RateLimit struct {
-	Enabled   bool
-	Rate      float64
-	Burst     int
-	ExpiresIn time.Duration
-}
-
-// Tracing holds OpenTelemetry trace exporter (OTLP/gRPC) settings.
-type Tracing struct {
-	Enabled     bool
-	Endpoint    string
-	Insecure    bool
-	SampleRatio float64
-}
-
 type Adapters struct {
 	ProductService HTTPClient
 }
@@ -57,8 +41,6 @@ type Server struct {
 	Name              string
 	Version           string
 	Port              string
-	BaseURI           string
-	RequestTimeout    time.Duration
 	ReadTimeout       time.Duration
 	WriteTimeout      time.Duration
 	CtxDefaultTimeout time.Duration
@@ -91,6 +73,22 @@ type Redis struct {
 type Logger struct {
 	Level  string
 	Format string // "json" or "console"
+}
+
+// RateLimit holds configuration for the Echo rate limiter middleware.
+type RateLimit struct {
+	Enabled   bool
+	Rate      float64
+	Burst     int
+	ExpiresIn time.Duration
+}
+
+// Tracing holds OpenTelemetry trace exporter (OTLP/gRPC) settings.
+type Tracing struct {
+	Enabled     bool
+	Endpoint    string
+	Insecure    bool
+	SampleRatio float64
 }
 
 type MQTT struct {

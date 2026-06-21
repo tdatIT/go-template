@@ -1,100 +1,96 @@
-# AGENTS — Quick Guide for AI coding agents
+# AGENTS.md
 
-**Purpose:** Give an AI (or new developer) the minimum, concrete repository knowledge needed to be productive: where to look first, how things are wired, developer commands, and project-specific conventions to follow.
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+## 0. Project Guideline
+
+**Read `docs/GUIDELINE.md` before implementing any feature.**
+
+`docs/GUIDELINE.md` is the authoritative reference for this template. It covers:
+- Full directory structure and layer contracts
+- Exact patterns for models, DTOs, commands, queries, handlers, workers, repositories
+- Step-by-step checklist to implement a new domain end-to-end
+- Which files to delete and which to keep when replacing the sample `user` domain
+- Config, error handling, and response conventions
+
+Do not implement a feature, add a layer, or create a new domain before reading the relevant section.
 
 ---
 
-## 0. Start here — GUIDELINE.md
+## 1. Think Before Coding
 
-> **Before writing a single line of code, read [`GUIDELINE.md`](.docs/GUIDELINE.md).**
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-`GUIDELINE.md` is the complete developer reference for this template. It contains:
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
-| Section | Read when |
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Validate Once at the Right Layer
+
+**Validate at the entry boundary. Trust layers below don't need to repeat it.**
+
+- The layer that first receives external input owns validation. For HTTP handlers that means the DTO + Echo validator. For consumers it means the message deserialization step.
+- **Application/service layers must NOT re-validate** what the caller already validated (nil checks, zero-value guards, required-field assertions). These checks add noise and imply distrust of the contract.
+- Only add validation in a deeper layer when there is **genuine business logic** that layer uniquely owns — e.g. a cross-field invariant, an external-system constraint, or a rule that no caller can pre-check.
+- Before adding any guard/check, ask: "has the caller already ensured this?" If yes, delete the check.
+
+Rule of thumb per layer in this project:
+| Layer | Validates |
 |---|---|
-| §1 Project Structure | Exploring the repo for the first time |
-| §2 Layer Contracts | Unsure which package a new file belongs in |
-| §3–§6 Domain / App / Handler / Worker | Implementing any feature end-to-end |
-| §7 Infrastructure | Adding a repository or outbound adapter |
-| §8 Shared Packages | Choosing a utility package |
-| §9 Configuration | Adding a new config key |
-| §10 Error Handling | Returning or creating an error |
-| §11 Implementing a New Domain | Replacing the `user` sample domain |
-| §12 Checklist | PR readiness review |
+| Handler | DTO binding + struct tags (required, min, format…) |
+| App | Business invariants only — never nil/zero-value re-checks |
+| Repository | Nothing — trusts the app layer |
 
-This file (`AGENTS.md`) gives you a quick orientation. `GUIDELINE.md` gives you the full contract.
+## 5. Goal-Driven Execution
 
----
+**Define success criteria. Loop until verified.**
 
-## 1. Big picture (read first)
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
 
-- **Entry:** `cmd/main.go` creates `server.NewServer()` and starts Echo.
-- **Server wiring:** `internal/server.go` builds the app: loads config, sets slog handler, opens DB/Redis, constructs repositories → application → handlers and calls `router.RegisterRoutes`.
-- **HTTP layer:** `internal/http.go` configures Echo middleware, request logging, validator and the global Echo error handler (`pkgs/ultis/svcerr.ErrorHandlerEchoFn`).
-- **Router → handlers → app → repository:** Routes are defined in `internal/router/routes.go`, handlers live in `internal/handler/*`, application logic in `internal/app/*`, and persistence in `internal/infras/repository/*`.
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
 
-## 2. Commands & developer workflows (exact)
-
-- **Run locally:** `make run` or `go run ./cmd/main.go` (README/Makefile)
-- **Build:** `make build` (binary in `build/` by default)
-- **Test:** `make test` (runs `go test ./...`); run single test: `go test ./pkg/path -run TestName`
-- **Lint / fmt / tidy:** `make lint` (runs `go vet`), `make fmt`, `make tidy` (`go mod tidy`)
-- **Docker image:** `make docker-build` (runs `docker build -t go-service:local .`)
-- **Config override:** Set `CONFIG_PATH` env var to point to your config (default is `config/config.yml` per `config.NewConfig()` / `getDefaultConfig()`).
-
-## 3. Project-specific conventions (must-follow)
-
-- **Error handling:** Use `pkgs/ultis/svcerr.Error` (or predefined errors in `pkgs/ultis/svcerr/common_err.go`) for application errors. Handlers return these errors directly so `ErrorHandlerEchoFn` maps them into the `pkgs/ultis/response.BaseRes` shape.
-- **Example:** Handler returns `svcerr.ErrBadRequest` on bind failures (`internal/handler/user/handler.go`).
-- **Responses:** Use `response.SuccessRes` / `response.ErrorRes` and call `.JSON(c)` to send consistent payloads (`pkgs/ultis/response/api_res_structure.go`).
-- **Validation — validate once, at the right layer (CRITICAL):**
-  - **Handler** is the sole entry-point validator for HTTP input. Bind the DTO and call `c.Validate(dto)`; struct tags (`required`, `min`, `email`, …) cover all basic field rules.
-  - **App layer must NOT repeat** nil-checks, zero-value guards, or required-field assertions that the handler already enforced. Trust the contract: if the app function is called, the input is already clean.
-  - **App layer may validate** only genuine business invariants that are impossible to express in struct tags — e.g. "end date must be after start date", "quota cannot exceed plan limit".
-  - **Repository layer validates nothing** — it trusts the app layer.
-  - Before writing any guard in app/repo, ask: *"could this have been caught above?"* If yes, delete it and fix the upper layer instead.
-- **Logging:** Structured JSON `slog` is configured in `internal/server.go` via `pkgs/logger.NewJsonSlogHandler`. Request logging is done with Echo's `RequestLoggerWithConfig` and a custom `LogValuesFunc` that emits `slog.Attr`.
-
-## 4. Integrations & wiring patterns
-
-- **Postgres/GORM:** Created via `pkgs/db/orm.NewDBConnection(cfg)` in `internal/server.go`; repositories accept an `orm.ORM` instance (see `internal/infras/repository/user/repository.go`).
-- **Redis:** Created via `pkgs/db/rdclient.NewRedisClient(cfg)` and closed on shutdown.
-- **Config:** Viper is used in `config/config.go`. Environment overrides enabled via `v.AutomaticEnv()` and `CONFIG_PATH` controls the file to load.
-- **Docker:** `Dockerfile` and `docker-compose.yml` present for container-based integration.
-
-## 5. Quick triage checklist (when changing behaviour)
-
-- **Add route:** Update `internal/router/routes.go` and add handler + app + repo wiring in `internal/server.go`.
-- **Add config key:** Update `config/config.yml` and check `config.AppConfig` fields in `config/config.go` (viper uses env key replacer `.`→`_`).
-- **New errors:** Add to `pkgs/ultis/svcerr/common_err.go` and return them from handlers/apps so the Echo error handler maps them automatically.
-
-## 6. Known quirks & gotchas (discoverable)
-
-- `config.getDefaultConfig()` returns `"/config/config"` and `NewConfig()` calls `v.SetConfigName(path)` — be careful with viper config name vs path (use `CONFIG_PATH` if unsure).
-- `pkgs/ultis/svcerr/handle_err_fn.go` inspects `SERVER_DEBUG` to decide how verbose validation messages are.
-- Small code smells to watch for: `cmd/main.go` uses `sync.WaitGroup` with `wg.Go(...)` which is non-standard — tests/CI may surface issues.
-
-## 7. Where to look next (first files to open)
-
-- `cmd/main.go`
-- `internal/server.go`
-- `internal/http.go`
-- `config/config.go`
-- `config/config.yml`
-- `internal/router/routes.go`
-- `internal/handler/*`
-- `internal/app/*`
-- `pkgs/ultis/svcerr/*`
-- `pkgs/ultis/response/*`
-- `pkgs/logger/slog.go`
-- `pkgs/db/*`
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
 ---
 
-## Follow-up options
-
-I can help with:
-
-- **(A)** Produce a checklist PR template for new routes/features
-- **(B)** Extract a dependency diagram
-- **(C)** Add unit-test scaffolding examples
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

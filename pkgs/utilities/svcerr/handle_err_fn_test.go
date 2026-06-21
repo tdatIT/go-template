@@ -47,7 +47,7 @@ func TestErrorHandlerEchoFn_EchoHTTPError(t *testing.T) {
 	var payload errorPayload
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
 	require.Equal(t, http.StatusNotFound, payload.Code)
-	require.Equal(t, "missing", payload.Message)
+	require.Equal(t, http.StatusText(http.StatusNotFound), payload.Message)
 }
 
 func TestErrorHandlerEchoFn_ValidationError(t *testing.T) {

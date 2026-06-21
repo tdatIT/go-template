@@ -1,9 +1,10 @@
 package mapper
 
 import (
+	"reflect"
+
 	"github.com/bytedance/sonic"
 	"github.com/jinzhu/copier"
-	"reflect"
 )
 
 // Copy - copy struct to struct

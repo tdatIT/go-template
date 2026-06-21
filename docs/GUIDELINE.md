@@ -17,8 +17,10 @@ It covers project structure, layer contracts, conventions, and the exact steps t
 8. [Shared Packages](#8-shared-packages)
 9. [Configuration](#9-configuration)
 10. [Error Handling](#10-error-handling)
-11. [Implementing a New Domain](#11-implementing-a-new-domain)
-12. [Checklist — New Feature End-to-End](#12-checklist--new-feature-end-to-end)
+11. [Health Checks — Probe](#11-health-checks--probe)
+12. [HTTP Client — Circuit Breaker](#12-http-client--circuit-breaker)
+13. [Implementing a New Domain](#13-implementing-a-new-domain)
+14. [Checklist — New Feature End-to-End](#14-checklist--new-feature-end-to-end)
 
 ---
 
@@ -27,50 +29,54 @@ It covers project structure, layer contracts, conventions, and the exact steps t
 ```
 .
 ├── cmd/
-│   └── main.go                     ← Entry point. Starts HTTP + Worker components.
+│   └── main.go                         ← Entry point. Starts HTTP + Worker components.
 ├── config/
-│   ├── config.go                   ← AppConfig struct and all sub-configs.
-│   └── config.yml                  ← Default values. Override via env vars.
-├── internal/                       ← Everything that must NOT be imported by external packages.
-│   ├── server.go                   ← Wires all dependencies. The only place that calls constructors.
-│   ├── http.go                     ← Echo instance setup (middleware, validator, error handler).
+│   ├── config.go                        ← AppConfig struct and all sub-configs.
+│   └── config.yml                       ← Default values. Override via env vars.
+├── internal/                            ← Everything that must NOT be imported by external packages.
+│   ├── server.go                        ← Wires all dependencies. The only place that calls constructors.
+│   ├── http.go                          ← Echo instance setup (middleware, validator, error handler).
+│   ├── middleware/
+│   │   └── tracing.go                   ← OpenTelemetry trace middleware.
 │   ├── router/
-│   │   └── routes.go               ← Registers all HTTP routes. One place, no magic.
-│   ├── domain/                     ← Pure business types — no framework imports.
-│   │   ├── models/                 ← GORM models (DB schema).
-│   │   ├── dtos/                   ← Request/Response structs per domain.
-│   │   ├── msgs/                   ← MQTT message payload structs.
-│   │   └── enums/                  ← Shared constants/error codes.
-│   ├── app/                        ← Application logic. One sub-package per domain.
+│   │   └── routes.go                    ← Registers all HTTP routes. One place, no magic.
+│   ├── domain/                          ← Pure business types — no framework imports.
+│   │   ├── models/                      ← GORM models (DB schema).
+│   │   ├── dtos/                        ← Request/Response structs per domain.
+│   │   ├── msgs/                        ← MQTT message payload structs.
+│   │   └── enums/                       ← Shared constants/error codes.
+│   ├── app/                             ← Application logic. One sub-package per domain.
 │   │   └── <domain>/
-│   │       ├── application.go      ← Aggregates commands + queries for the domain.
-│   │       ├── command/            ← Write operations (create, update, delete).
-│   │       └── query/              ← Read operations (get, list).
-│   ├── handler/                    ← HTTP handlers. One sub-package per domain.
+│   │       ├── application.go           ← Aggregates commands + queries for the domain.
+│   │       ├── command/                 ← Write operations (create, update, delete).
+│   │       └── query/                   ← Read operations (get, list).
+│   ├── handler/                         ← HTTP handlers. One sub-package per domain.
 │   │   └── <domain>/
 │   │       └── handler.go
-│   ├── worker/                     ← MQTT subscribers. Transport layer, like handlers.
-│   │   ├── worker_group.go         ← WorkerGroup (Register + StartGroup). Framework code — do not modify.
-│   │   └── event/                  ← Child workers, one file per topic.
-│   └── infras/                     ← Infrastructure implementations.
-│       ├── repository/<domain>/    ← DB access. Implements domain repository interface.
-│       ├── adapter/<service>/      ← Outbound REST adapters. Implements domain adapter interface.
-│       └── mqttpub/                ← MQTT publisher. Wraps pkgs/mqtt.
-├── pkgs/                           ← Shared, reusable packages. No business logic.
-│   ├── caller/                     ← Resty HTTP client factory.
-│   ├── db/orm/                     ← GORM connection factory.
-│   ├── db/rdclient/                ← Redis client factory.
-│   ├── decorator/                  ← Generic command/query handler interfaces.
-│   ├── logger/                     ← slog JSON handler.
-│   ├── mqtt/                       ← Paho MQTT client wrapper.
-│   └── ultis/
-│       ├── mapper/                 ← Struct-to-struct and struct-to-map helpers.
-│       ├── paging/                 ← Page/size pagination (ListQuery, ListResponse).
-│       ├── response/               ← HTTP response envelope (BaseRes).
-│       ├── svcerr/                 ← Typed errors + Echo error handler.
-│       └── validate/               ← go-playground/validator singleton.
+│   ├── worker/                          ← MQTT subscribers. Transport layer, like handlers.
+│   │   ├── worker_group.go              ← WorkerGroup (Register + StartGroup). Framework code — do not modify.
+│   │   └── event/                       ← Child workers, one file per topic.
+│   └── infras/                          ← Infrastructure implementations.
+│       ├── repository/<domain>/         ← DB access. Implements domain repository interface.
+│       ├── adapter/<service>/           ← Outbound REST adapters. Implements domain adapter interface.
+│       └── mqttpub/                     ← MQTT publisher. Wraps pkgs/mqtt.
+├── pkgs/                                ← Shared, reusable packages. No business logic.
+│   ├── httpclient/                      ← Resty HTTP client factory + circuit breaker.
+│   ├── probe/                           ← Framework-agnostic health check (net/http).
+│   ├── db/orm/                          ← GORM connection factory.
+│   ├── db/rdclient/                     ← Redis client factory.
+│   ├── logger/                          ← slog JSON handler.
+│   ├── mqtt/                            ← Paho MQTT client wrapper.
+│   ├── tracing/                         ← OpenTelemetry tracer initialisation.
+│   └── utilities/
+│       ├── decorator/                   ← Generic command/query handler interfaces.
+│       ├── mapper/                      ← Struct-to-struct and struct-to-map helpers.
+│       ├── paging/                      ← Page/size pagination (ListQuery, ListResponse).
+│       ├── response/                    ← HTTP response envelope (BaseRes).
+│       ├── svcerr/                      ← Typed errors + Echo error handler.
+│       └── validate/                    ← go-playground/validator singleton.
 └── docker/
-    └── mosquitto/mosquitto.conf    ← Mosquitto broker config for local dev.
+    └── mosquitto/mosquitto.conf         ← Mosquitto broker config for local dev.
 ```
 
 ---
@@ -84,8 +90,8 @@ MQTT Message ──► Worker  ──► App (Command/Query) ──► Repositor
 
 | Layer | Responsibility | Allowed dependencies |
 |---|---|---|
-| Handler / Worker | Decode input, validate format, call app, encode response | `app`, `domain/dtos`, `domain/msgs`, `pkgs/ultis` |
-| App (Command/Query) | Business logic and orchestration | `domain/models`, `domain/dtos`, `infras` interfaces, `pkgs/ultis/svcerr` |
+| Handler / Worker | Decode input, validate format, call app, encode response | `app`, `domain/dtos`, `domain/msgs`, `pkgs/utilities` |
+| App (Command/Query) | Business logic and orchestration | `domain/models`, `domain/dtos`, `infras` interfaces, `pkgs/utilities/svcerr` |
 | Repository / Adapter | Data access and external calls | `domain/models`, ORM / HTTP client |
 | Domain | Pure types — no behaviour | Nothing |
 
@@ -170,12 +176,6 @@ Each domain has one `Application` struct that bundles all commands and queries.
 // internal/app/order/command/create_order.go
 package command
 
-import (
-    "github.com/tdatIT/go-template/.agents/skills/go-clean-cqrs-architecture/references/decorator"
-    "github.com/tdatIT/go-template/internal/domain/dtos/orderdtos"
-)
-
-// Declare the interface using the decorator generic — keeps the app layer testable.
 type ICreateOrderCommand decorator.CommandReturnHandler[*orderdtos.CreateOrderReq, *orderdtos.OrderDTO]
 
 type createOrderCommand struct{ repo order.Repository }
@@ -185,7 +185,6 @@ func NewCreateOrderCommand(repo order.Repository) ICreateOrderCommand {
 }
 
 func (c *createOrderCommand) Handle(ctx context.Context, req *orderdtos.CreateOrderReq) (*orderdtos.OrderDTO, error) {
-    // Business logic here. Do NOT re-validate nil/zero — the handler already did.
     model := &models.Order{UserID: req.UserID, Status: "pending"}
     if err := c.repo.Create(ctx, model); err != nil {
         return nil, svcerr.ErrInternalServer
@@ -246,10 +245,10 @@ func NewOrderHandler(app *orderapp.Application) *Handler { return &Handler{app: 
 func (h *Handler) CreateOrder(c *echo.Context) error {
     var req orderdtos.CreateOrderReq
     if err := c.Bind(&req); err != nil {
-        return svcerr.ErrBadRequest           // bind failure
+        return svcerr.ErrBadRequest
     }
     if err := c.Validate(&req); err != nil {
-        return err                             // validation failure — already a svcerr
+        return err
     }
 
     data, err := h.app.Command.CreateOrder.Handle(c.Request().Context(), &req)
@@ -270,6 +269,12 @@ func (h *Handler) CreateOrder(c *echo.Context) error {
 orderRoute := v1.Group("/orders")
 orderRoute.POST("", orderHandler.CreateOrder)
 orderRoute.GET("/:id", orderHandler.GetOrder)
+```
+
+**Wrapping a standard `net/http` handler inside Echo:**
+
+```go
+e.GET("/readiness", echo.WrapHandler(someHttpHandler))
 ```
 
 **Parsing helpers (keep in handler file):**
@@ -363,7 +368,7 @@ type Workers struct {
 
 Two files: interface + implementation.
 
-**Interface** (owned by the domain, not infras):
+**Interface:**
 
 ```go
 // internal/infras/repository/order/repository.go
@@ -402,7 +407,7 @@ Add `//go:generate mockery --name=Repository` to `repository.go`.
 
 ### Outbound Adapter (`internal/infras/adapter/<service>/`)
 
-Interface defined in the package, implementation wires `pkgs/caller`:
+Interface defined in the package, implementation wires `pkgs/httpclient`:
 
 ```go
 // adapter.go — interface
@@ -412,7 +417,7 @@ type ServiceAdapter interface {
 
 // adapter_impl.go — implementation
 func NewAdapter(cfg *config.HTTPClient) ServiceAdapter {
-    c := caller.New(caller.Config{BaseURL: cfg.BaseURL, ...})
+    c := httpclient.New(httpclient.Config{BaseURL: cfg.BaseURL, ...})
     return &adapter{caller: c}
 }
 ```
@@ -433,15 +438,17 @@ These packages contain zero business logic. Do not modify unless fixing a bug.
 
 | Package | Use when |
 |---|---|
-| `pkgs/ultis/svcerr` | Returning or wrapping errors from handlers/app |
-| `pkgs/ultis/response` | Building HTTP responses: `res := response.SuccessRes; res.Data = dto; res.JSON(c)` |
-| `pkgs/ultis/paging` | Paginated list endpoints: `ListQuery` (input), `ListResponse` (output) |
-| `pkgs/ultis/mapper` | Copying structs or converting struct → map |
-| `pkgs/ultis/validate` | Already wired via `e.Validator = validate.GetValidator()` — no direct use needed |
-| `pkgs/decorator` | Generic `CommandHandler[T]` / `QueryHandler[T,E]` interfaces |
-| `pkgs/caller` | Building outbound HTTP adapters |
+| `pkgs/utilities/svcerr` | Returning or wrapping errors from handlers/app |
+| `pkgs/utilities/response` | Building HTTP responses: `res := response.SuccessRes; res.Data = dto; res.JSON(c)` |
+| `pkgs/utilities/paging` | Paginated list endpoints: `ListQuery` (input), `ListResponse` (output) |
+| `pkgs/utilities/mapper` | Copying structs or converting struct → map |
+| `pkgs/utilities/validate` | Already wired via `e.Validator = validate.GetValidator()` — no direct use needed |
+| `pkgs/utilities/decorator` | Generic `CommandHandler[T]` / `QueryHandler[T,E]` interfaces |
+| `pkgs/httpclient` | Building outbound HTTP adapters; optionally add circuit breaker via `CBConfig` |
+| `pkgs/probe` | Registering health checkers and exposing a `net/http` readiness handler |
 | `pkgs/mqtt` | Direct MQTT pub/sub — used by `mqttpub` and workers, not by app layer |
 | `pkgs/logger` | Only used in `server.go` to set the default `slog` handler |
+| `pkgs/tracing` | Only used in `server.go` to initialise the OTel tracer |
 
 ---
 
@@ -465,11 +472,25 @@ database:
   password: ""   # override: DATABASE_PASSWORD
 ```
 
+### Docker / container overrides
+
+When running inside Docker Compose, services communicate by container name, not `localhost`.
+Pass env vars in `docker-compose.yml` to override the YAML defaults:
+
+```yaml
+environment:
+  - DATABASE_HOST=postgres
+  - REDIS_ADDRESS=redis:6379
+  - MQTT_BROKER=tcp://emqx:1883
+```
+
+`REDIS_ADDRESS` overrides the `redis.address` slice — Viper's `WeaklyTypedInput` coerces the string into `[]string{"redis:6379"}`.
+
 ---
 
 ## 10. Error Handling
 
-### Predefined errors (`pkgs/ultis/svcerr/common_err.go`)
+### Predefined errors (`pkgs/utilities/svcerr/common_err.go`)
 
 Use existing errors before creating new ones:
 
@@ -496,6 +517,17 @@ ErrQuotaExceeded = &Error{
 }
 ```
 
+### Error handler (`pkgs/utilities/svcerr/handle_err_fn.go`)
+
+Registered as `e.HTTPErrorHandler` in `internal/http.go`. Resolution order:
+
+1. `*svcerr.Error` — domain error: use `Status`, `Code`, `Message` directly.
+2. `validator.ValidationErrors` — 400 + `enums.InvalidArgument`.
+3. `echo.HTTPStatusCoder` — extract HTTP status via interface; respond with `http.StatusText(code)`.
+4. Default — 500 + `enums.Internal` + `"internal server error"`.
+
+HEAD requests always respond with `NoContent(code)` (no body).
+
 ### Logging before returning 500
 
 ```go
@@ -507,7 +539,112 @@ Never expose raw error messages to the caller. Log them, return a typed error.
 
 ---
 
-## 11. Implementing a New Domain
+## 11. Health Checks — Probe
+
+Health check logic lives in `pkgs/probe/` — a pure `net/http` package with **no framework dependency**.
+
+### Probe package (`pkgs/probe/`)
+
+| File | Contents |
+|---|---|
+| `probe.go` | `Checker` interface, `CheckerFunc` adapter, `Probe` struct, `Handler() http.HandlerFunc` |
+| `checkers.go` | `DBChecker(orm.ORM)`, `RedisChecker(rdclient.RedisClient)` — built-in adapter functions |
+
+### Wire in `server.go`
+
+```go
+readyProbe := probe.New(3 * time.Second).
+    Register("postgres", probe.DBChecker(database)).
+    Register("redis", probe.RedisChecker(redisClient))
+```
+
+### Register routes
+
+```go
+// internal/router/routes.go
+e.GET("/liveness",  func(c *echo.Context) error {
+    return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+})
+e.GET("/readiness", echo.WrapHandler(readyProbe.Handler()))
+```
+
+`Handler()` runs all registered checkers **concurrently** within the request context timeout.
+Responds `200 ok` when all pass, `503 degraded` with per-component details when any fail.
+
+### Adding a custom checker
+
+Implement `probe.Checker` or use `probe.CheckerFunc`:
+
+```go
+readyProbe.Register("mqtt", probe.CheckerFunc(func(ctx context.Context) error {
+    return mqttCli.Ping(ctx)
+}))
+```
+
+---
+
+## 12. HTTP Client — Circuit Breaker
+
+`pkgs/httpclient` wraps [go-resty](https://github.com/go-resty/resty) and optionally adds a circuit breaker at the `http.RoundTripper` level — transparent to all resty methods.
+
+### Config
+
+```go
+type Config struct {
+    BaseURL        string
+    Timeout        time.Duration
+    KeepAlive      time.Duration
+    RetryCount     int
+    RetryWait      time.Duration
+    RetryCondition resty.RetryConditionFunc
+    Debug          bool
+    CircuitBreaker *CBConfig  // nil disables the circuit breaker
+}
+
+type CBConfig struct {
+    MaxFailures    int           // consecutive failures to open the circuit
+    HalfOpenProbes int           // consecutive successes to close from half-open
+    OpenTimeout    time.Duration // how long to stay open before probing
+    ShouldTrip     func(resp *http.Response, err error) bool  // nil = transport errors only
+}
+```
+
+### State machine
+
+```
+Closed ──(MaxFailures failures)──► Open ──(OpenTimeout elapsed)──► HalfOpen
+  ▲                                                                     │
+  └─────────────(HalfOpenProbes successes)─────────────────────────────┘
+```
+
+Any failure in `HalfOpen` immediately returns to `Open`.
+
+### Usage in an adapter
+
+```go
+func NewAdapter(cfg *config.HTTPClient) ServiceAdapter {
+    c := httpclient.New(httpclient.Config{
+        BaseURL: cfg.BaseURL,
+        Timeout: cfg.Timeout,
+        CircuitBreaker: &httpclient.CBConfig{
+            MaxFailures:    5,
+            HalfOpenProbes: 2,
+            OpenTimeout:    10 * time.Second,
+            // Optional: also trip on 5xx responses
+            ShouldTrip: func(r *http.Response, err error) bool {
+                return err != nil || (r != nil && r.StatusCode >= 500)
+            },
+        },
+    })
+    return &adapter{caller: c}
+}
+```
+
+When the circuit is open, `MakeRequest()` returns `httpclient.ErrCircuitOpen` immediately without hitting the network.
+
+---
+
+## 13. Implementing a New Domain
 
 ### Step 1 — Define the domain types
 
@@ -589,11 +726,19 @@ internal/infras/adapter/<service>/dto/
 
 Add HTTP client config to `config/config.go` (`Adapters.<Service> HTTPClient`) and YAML.
 
+### Step 10 — (Optional) Add a health checker
+
+If the new infra dependency should be reflected in `/readiness`, register a checker in `server.go`:
+
+```go
+readyProbe.Register("<name>", probe.CheckerFunc(func(ctx context.Context) error {
+    return <client>.Ping(ctx)
+}))
+```
+
 ---
 
-## 12. Checklist — New Feature End-to-End
-
-Use this before opening a PR for a new domain or feature.
+## 14. Checklist — New Feature End-to-End
 
 **Domain:**
 - [ ] Model created and GORM-tagged
@@ -622,11 +767,16 @@ Use this before opening a PR for a new domain or feature.
 - [ ] Repository interface in `repository/<domain>/repository.go`
 - [ ] Mock generated (`go generate`) for unit tests
 - [ ] No validation in repository — trusts the app layer
+- [ ] Outbound adapter uses `pkgs/httpclient`; consider `CBConfig` for circuit breaker
+
+**Probe (if new infra dependency):**
+- [ ] Checker registered in `server.go` via `readyProbe.Register(...)`
 
 **Config:**
 - [ ] New keys added to `config/config.go` struct
 - [ ] Defaults set in `config/config.yml`
 - [ ] Sensitive fields empty in YAML with `# override: ENV_VAR` comment
+- [ ] Docker Compose env overrides added if service name differs from `localhost`
 
 **Tests:**
 - [ ] App layer: unit tests with mock repository
@@ -653,13 +803,14 @@ internal/worker/event/user_event_worker.go
 
 **Keep (framework core — do not delete):**
 ```
-pkgs/                       ← all shared packages
-config/                     ← modify, do not delete
-internal/server.go          ← rewire with your domain
-internal/http.go            ← do not modify
-internal/router/routes.go   ← replace routes
+pkgs/                           ← all shared packages
+config/                         ← modify, do not delete
+internal/server.go              ← rewire with your domain
+internal/http.go                ← do not modify
+internal/router/routes.go       ← replace routes
 internal/worker/worker_group.go
 internal/infras/mqttpub/
+internal/middleware/
 ```
 
-After deleting, follow the steps in [Section 11](#11-implementing-a-new-domain) for your domain.
+After deleting, follow the steps in [Section 13](#13-implementing-a-new-domain) for your domain.

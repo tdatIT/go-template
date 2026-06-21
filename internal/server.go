@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/labstack/echo/v5"
 
@@ -10,7 +11,6 @@ import (
 
 	"github.com/tdatIT/go-template/config"
 	userApp "github.com/tdatIT/go-template/internal/app/user"
-	healthHandler "github.com/tdatIT/go-template/internal/handler/health"
 	userHandler "github.com/tdatIT/go-template/internal/handler/user"
 	"github.com/tdatIT/go-template/internal/infras/adapter/productsvc"
 	"github.com/tdatIT/go-template/internal/infras/mqttpub"
@@ -21,6 +21,7 @@ import (
 	"github.com/tdatIT/go-template/pkgs/db/rdclient"
 	"github.com/tdatIT/go-template/pkgs/logger"
 	mqttpkg "github.com/tdatIT/go-template/pkgs/mqtt"
+	"github.com/tdatIT/go-template/pkgs/probe"
 	"github.com/tdatIT/go-template/pkgs/tracing"
 )
 
@@ -71,20 +72,38 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 
-	redisClient, err := rdclient.NewRedisClient(cfg)
-	if err != nil {
-		return nil, err
+	redisClient, redisErr := rdclient.NewRedisClient(cfg)
+	if redisErr != nil {
+		slog.Warn("redis unavailable at startup; readiness probe will report degraded",
+			slog.String("error", redisErr.Error()))
+	}
+
+	readyProbe := probe.New(3*time.Second).
+		Register("postgres", probe.DBChecker(database))
+	if redisErr == nil {
+		readyProbe.Register("redis", probe.RedisChecker(redisClient))
+	} else {
+		readyProbe.Register("redis", probe.CheckerFunc(func(_ context.Context) error {
+			return redisErr
+		}))
 	}
 
 	echoApp := newHttpServer(cfg)
 
 	userRepository := userRepos.NewUserRepository(database)
+
 	productAdapter := productsvc.NewAdapter(&cfg.Adapters.ProductService)
+
 	userApplication := userApp.NewUserApplication(userRepository, productAdapter)
 
 	usrHandle := userHandler.NewUserHandler(userApplication)
-	healthHandle := healthHandler.NewHealthHandler(database, redisClient)
-	router.RegisterRoutes(echoApp, usrHandle, healthHandle)
+
+	// Register new router
+	router.RegisterRoutes(
+		echoApp,
+		usrHandle,
+		readyProbe,
+	)
 
 	// WorkerGroup is always created; workers are only registered when MQTT is available.
 	workerGroup := worker.NewWorkerGroup()

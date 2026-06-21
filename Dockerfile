@@ -19,7 +19,11 @@ RUN apk add --no-cache ca-certificates \
 
 WORKDIR /app
 COPY --from=builder /app/app-bin /app/app-bin
-EXPOSE 8080
+COPY --from=builder /app/config  /app/config
+
+ENV CONFIG_PATH=/app/config/config
+
+EXPOSE 5000
 USER app
 
 ENTRYPOINT ["/app/app-bin"]

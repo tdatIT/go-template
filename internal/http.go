@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/google/uuid"
 	echoprometheus "github.com/labstack/echo-prometheus"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -20,7 +21,11 @@ func newHttpServer(cfg *config.AppConfig) *echo.Echo {
 	e := echo.New()
 	e.Use(middleware.Recover())
 	e.Use(middleware.ContextTimeout(cfg.Server.CtxDefaultTimeout))
-	e.Use(middleware.RequestID())
+	e.Use(middleware.RequestIDWithConfig(middleware.RequestIDConfig{
+		Generator: func() string {
+			return uuid.New().String()
+		},
+	}))
 	e.Validator = validate.GetValidator()
 
 	e.HTTPErrorHandler = svcerr.ErrorHandlerEchoFn

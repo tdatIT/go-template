@@ -1,12 +1,11 @@
 server:
-  debug: true
-  name: "go-template"
-  version: "0.1.0"
-  port: ":8080"
-  requestTimeout: "15s"
+  name: "backend-service"
+  version: "1.0.0"
+  port: ":5000"
   readTimeout: "5s"
-  writeTimeout: "10s"
+  writeTimeout: "5s"
   ctxDefaultTimeout: "15s"
+  debug: true
 
 database:
   host: "localhost"
@@ -20,7 +19,6 @@ database:
   connMaxLifetime: "1h"
   connMaxIdleTime: "10m"
   options: ""
-  debug: false
 
 redis:
   mode: "single"
@@ -33,7 +31,7 @@ redis:
 
 logger:
   level: "info"
-  endcoding: "json"
+  format: "console"
 
 mqtt:
   broker: "tcp://localhost:1883"

@@ -29,7 +29,7 @@ test:
 	go test ./...
 
 lint:
-	go vet ./...
+	go vet ./... && golangci-lint run ./...
 
 fmt:
 	go fmt ./...
@@ -40,7 +40,7 @@ tidy:
 mocks:
 	go tool mockery
 
-docker-build:
+dockerize:
 	docker build -t $(DOCKER_IMAGE) .
 
 clean:

@@ -22,6 +22,7 @@ type Config struct {
 	RetryWait      time.Duration // wait between retries on error
 	RetryCondition resty.RetryConditionFunc
 	Debug          bool
+	CircuitBreaker *CBConfig // nil disables the circuit breaker
 }
 
 type caller struct {
@@ -36,12 +37,20 @@ func New(cfg Config) Caller {
 		IdleConnTimeout: cfg.KeepAlive,
 	}
 
+	var rt http.RoundTripper = transport
+	if cfg.CircuitBreaker != nil {
+		rt = &cbTransport{
+			cb:   newCircuitBreaker(*cfg.CircuitBreaker),
+			next: transport,
+		}
+	}
+
 	client := resty.New().
 		SetBaseURL(cfg.BaseURL).
 		SetTimeout(cfg.Timeout).
 		SetRetryCount(cfg.RetryCount).
 		SetRetryWaitTime(cfg.RetryWait).
-		SetTransport(transport).
+		SetTransport(rt).
 		SetDebug(cfg.Debug)
 
 	if cfg.RetryCondition != nil {
