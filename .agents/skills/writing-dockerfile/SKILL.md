@@ -23,7 +23,15 @@ Create Dockerfiles to containerize Go applications. Use multi-stage builds to ke
 
 5. Use a minimal runtime image such as `alpine:<version>`, install only required packages like `ca-certificates`, and avoid extra tools.
 6. Create a non-root user and group, then set the binary ownership and permissions before switching users.
-7. Copy only the built binary into the runtime image, expose only the needed port, and set the binary as the entrypoint.
+7. Copy the built binary **and the `config/` directory** into the runtime image. Set `ENV CONFIG_PATH=/app/config/config` so Viper can find the default config file without a bind mount:
+
+   ```dockerfile
+   COPY --from=builder /app/app-bin   /app/app-bin
+   COPY --from=builder /app/config    /app/config
+   ENV CONFIG_PATH=/app/config/config
+   ```
+
+8. Expose only the needed port and set the binary as the entrypoint.
 
 
 ## Rules

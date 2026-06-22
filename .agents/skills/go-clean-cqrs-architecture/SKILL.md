@@ -1,6 +1,6 @@
 ---
 name: go-clean-cqrs-architecture
-description: Use when designing or implementing a Go HTTP service with clean architecture + CQRS, matching this repo's template (Echo v5, GORM, slog, generic decorator handlers, svcerr error model). Covers layer layout, where interfaces live, command/query handlers, repositories, DTOs, transport wiring, structured logging, and the service-error pattern. Use it to scaffold a new domain or a whole new service that looks like this base.
+description: Use when designing or implementing a Go HTTP service with clean architecture + CQRS, matching this repo's template (Echo v5, GORM, slog, generic decorator handlers, svcerr error model, probe health checks, httpclient circuit breaker). Covers layer layout, where interfaces live, command/query handlers, repositories, DTOs, transport wiring, health probes, outbound HTTP clients, structured logging, and the service-error pattern. Use it to scaffold a new domain or a whole new service that looks like this base.
 ---
 
 # Clean Architecture with CQRS in Go
@@ -16,10 +16,12 @@ see [Handle Logging (Go)](../handle-logging/SKILL.md).
 
 - HTTP: **Echo v5** (`github.com/labstack/echo/v5`), handlers take `*echo.Context`.
 - Persistence: **GORM** (Postgres) behind an `orm.ORM` interface.
-- Cache: **go-redis** behind a `rdclient.RedisClient` interface.
+- Cache: **go-redis v9** behind a `rdclient.RedisClient` interface.
 - Logging: **stdlib `log/slog`** (JSON handler) — NOT zap/zerolog.
-- Config: **viper** with `CONFIG_PATH` override.
+- Config: **viper** with `CONFIG_PATH` override and env var mapping (`DATABASE_HOST`, `REDIS_ADDRESS`, …).
 - Validation: **go-playground/validator** via Echo's validator hook.
+- Health: **`pkgs/probe`** — framework-agnostic `net/http` readiness handler.
+- Outbound HTTP: **`pkgs/httpclient`** (resty wrapper) with optional circuit breaker.
 
 ## Layers
 
@@ -32,7 +34,7 @@ see [Handle Logging (Go)](../handle-logging/SKILL.md).
   implementation and depends on `pkgs/db`.
 - **Interface/Transport** (`internal/handler`, `internal/router`): Echo handlers
   and routes; depend on Application.
-- **Shared** (`pkgs`): decorator, logger, db clients, utils (`ultis`).
+- **Shared** (`pkgs`): decorator, logger, db clients, probe, httpclient, utilities.
 - **Entry/Config** (`cmd`, `config`, `internal/server.go`, `internal/http.go`).
 
 Group code by domain (e.g. `user`) across layers.
@@ -41,30 +43,43 @@ Group code by domain (e.g. `user`) across layers.
 
 ```
 service/
-├─ cmd/main.go                         # builds server.NewServer(), starts Echo
-├─ config/{config.go,config.yml}       # viper; AppConfig struct
+├─ cmd/main.go                            # builds server.NewServer(), starts Echo + workers
+├─ config/{config.go,config.yml}          # viper; AppConfig struct
 ├─ internal/
-│  ├─ server.go                        # wiring: config→slog→DB/Redis→repo→app→handler→routes
-│  ├─ http.go                          # Echo middleware, validator, global error handler
-│  ├─ router/routes.go                 # RegisterRoutes(e, handlers...)
+│  ├─ server.go                           # wiring: config→slog→DB/Redis→probe→repo→app→handler→routes
+│  ├─ http.go                             # Echo middleware, validator, global error handler
+│  ├─ middleware/tracing.go               # OTel trace middleware
+│  ├─ router/routes.go                    # RegisterRoutes(e, handlers..., readyProbe)
 │  ├─ app/<domain>/
-│  │  ├─ application.go                # aggregates Command/Query, NewXApplication(repo)
+│  │  ├─ application.go                   # aggregates Command/Query, NewXApplication(repo)
 │  │  ├─ command/{create,update,delete}_<domain>.go
 │  │  └─ query/{get_*,list_*}.go
 │  ├─ domain/
-│  │  ├─ models/<domain>.go            # GORM models (gorm tags)
-│  │  ├─ dtos/<domain>dtos/<domain>_dto.go  # req/res DTOs (validate tags) + NewXDTO mappers
-│  │  └─ enums/svc_code.go             # numeric service codes
-│  ├─ handler/<domain>/handler.go      # Echo handlers (*echo.Context)
-│  └─ infras/repository/<domain>/
-│     ├─ repository.go                 # the Repository INTERFACE
-│     └─ repos_impl.go                 # GORM implementation + NewXRepository(orm.ORM)
+│  │  ├─ models/<domain>.go               # GORM models (gorm tags)
+│  │  ├─ dtos/<domain>dtos/<domain>_dto.go# req/res DTOs (validate tags) + NewXDTO mappers
+│  │  └─ enums/svc_code.go                # numeric service codes
+│  ├─ handler/<domain>/handler.go         # Echo handlers (*echo.Context)
+│  └─ infras/
+│     ├─ repository/<domain>/
+│     │  ├─ repository.go                 # the Repository INTERFACE
+│     │  └─ repos_impl.go                 # GORM implementation + NewXRepository(orm.ORM)
+│     ├─ adapter/<service>/               # outbound REST adapters (httpclient)
+│     └─ mqttpub/                         # MQTT publisher wrapper
 ├─ pkgs/
-│  ├─ decorator/{command.go,queries.go}# generic CommandHandler/QueryHandler
-│  ├─ logger/slog.go                   # NewJsonSlogHandler
-│  ├─ db/{orm,rdclient}/               # ORM + Redis interfaces & constructors
-│  └─ ultis/{response,svcerr,validate}/
-├─ .mockery.yaml                       # see Writing Tests skill
+│  ├─ utilities/
+│  │  ├─ decorator/{command.go,queries.go}# generic CommandHandler/QueryHandler
+│  │  ├─ response/                        # BaseRes + SuccessRes
+│  │  ├─ svcerr/                          # *Error type, common_err.go, ErrorHandlerEchoFn
+│  │  ├─ paging/                          # ListQuery / ListResponse
+│  │  ├─ mapper/                          # struct-to-struct helpers
+│  │  └─ validate/                        # validator singleton
+│  ├─ probe/                              # Checker interface, Probe, DBChecker, RedisChecker
+│  ├─ httpclient/                         # resty factory + CBConfig circuit breaker
+│  ├─ logger/slog.go                      # NewSlogLogger
+│  ├─ db/{orm,rdclient}/                  # ORM + Redis interfaces & constructors
+│  ├─ mqtt/                               # MQTT client wrapper
+│  └─ tracing/                            # OTel initialisation
+├─ .mockery.yaml                          # see Writing Tests skill
 ├─ Dockerfile
 └─ go.mod
 ```
@@ -111,7 +126,7 @@ The repository returns **raw GORM errors** (e.g. `gorm.ErrRecordNotFound`,
 
 ## CQRS via Generic Decorators
 
-`pkgs/decorator` defines three generic handler interfaces:
+`pkgs/utilities/decorator` defines three generic handler interfaces:
 
 ```go
 type CommandHandler[T any]              interface{ Handle(ctx context.Context, req T) error }
@@ -133,9 +148,6 @@ func NewCreateUserCommand(repo user.Repository) ICreateUserCommand { return &cre
 
 func (c *createUserCommand) Handle(ctx context.Context, req *userdtos.CreateUserReq) (*userdtos.UserDTO, error) {
 	model := &models.User{Name: strings.TrimSpace(req.Name), Email: strings.TrimSpace(req.Email)}
-	if model.Name == "" || model.Email == "" {
-		return nil, svcerr.ErrInvalidParameters
-	}
 	if err := c.repo.Create(ctx, model); err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, svcerr.ErrAlreadyExists
@@ -178,8 +190,7 @@ func NewUserApplication(userRepo user.Repository) *Application {
 ## DTOs & Models
 
 - DTOs live in `internal/domain/dtos/<domain>dtos`, carry `json` + `validate`
-  tags, and provide `NewXDTO`/`NewXDTOs` mappers from models. Path params use
-  `json:"-"` and are set by the handler.
+  tags, and provide `NewXDTO`/`NewXDTOs` mappers from models.
 - Models live in `internal/domain/models` with GORM tags.
 
 ```go
@@ -199,11 +210,9 @@ Handlers bind+validate, delegate to the app, and return service errors directly
 func (h *Handler) CreateUser(c *echo.Context) error {
 	var req userdtos.CreateUserReq
 	if err := c.Bind(&req); err != nil {
-		slog.Error("bind request failed", slog.String("error", err.Error()))
 		return svcerr.ErrBadRequest
 	}
 	if err := c.Validate(&req); err != nil {
-		slog.Error("validate request failed", slog.String("error", err.Error()))
 		return err
 	}
 	data, err := h.app.Command.CreateUser.Handle(c.Request().Context(), &req)
@@ -219,9 +228,96 @@ func (h *Handler) CreateUser(c *echo.Context) error {
 - The `Handler` struct holds `*<domain>.Application`; `NewXHandler(app)`.
 - Parse path params with a small helper returning `svcerr.ErrInvalidIdParam`.
 
+**Wrapping a `net/http` handler inside Echo:**
+
+```go
+e.GET("/readiness", echo.WrapHandler(readyProbe.Handler()))
+```
+
+## Health Checks — Probe
+
+`pkgs/probe` exposes a pure `net/http` readiness handler with no framework dependency.
+
+```go
+// Checker interface — implement or use CheckerFunc adapter
+type Checker interface {
+	Check(ctx context.Context) error
+}
+```
+
+**Wire in `server.go`:**
+
+```go
+readyProbe := probe.New(3 * time.Second).
+	Register("postgres", probe.DBChecker(database)).
+	Register("redis",    probe.RedisChecker(redisClient))
+```
+
+If Redis is unavailable at startup, log a warning and register a static failing checker — do NOT crash the server:
+
+```go
+redisClient, redisErr := rdclient.NewRedisClient(cfg)
+if redisErr != nil {
+	slog.Warn("redis unavailable at startup; readiness probe will report degraded",
+		slog.String("error", redisErr.Error()))
+}
+readyProbe := probe.New(3 * time.Second).Register("postgres", probe.DBChecker(database))
+if redisErr == nil {
+	readyProbe.Register("redis", probe.RedisChecker(redisClient))
+} else {
+	readyProbe.Register("redis", probe.CheckerFunc(func(_ context.Context) error { return redisErr }))
+}
+```
+
+**Register routes:**
+
+```go
+e.GET("/liveness",  func(c *echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+})
+e.GET("/readiness", echo.WrapHandler(readyProbe.Handler()))
+```
+
+**Adding a custom checker for a new infra dependency:**
+
+```go
+readyProbe.Register("mqtt", probe.CheckerFunc(func(ctx context.Context) error {
+	return mqttCli.Ping(ctx)
+}))
+```
+
+## Outbound HTTP — httpclient + Circuit Breaker
+
+All outbound REST adapters use `pkgs/httpclient` (resty wrapper). Add
+`CircuitBreaker: &httpclient.CBConfig{…}` to protect against downstream failures:
+
+```go
+func NewAdapter(cfg *config.HTTPClient) ServiceAdapter {
+	c := httpclient.New(httpclient.Config{
+		BaseURL:    cfg.BaseURL,
+		Timeout:    cfg.Timeout,
+		RetryCount: cfg.RetryCount,
+		RetryWait:  cfg.RetryWait,
+		CircuitBreaker: &httpclient.CBConfig{
+			MaxFailures:    5,
+			HalfOpenProbes: 2,
+			OpenTimeout:    10 * time.Second,
+			// Optional: also trip on 5xx
+			ShouldTrip: func(r *http.Response, err error) bool {
+				return err != nil || (r != nil && r.StatusCode >= 500)
+			},
+		},
+	})
+	return &adapter{caller: c}
+}
+```
+
+States: `Closed → Open → HalfOpen → Closed`. Returns `httpclient.ErrCircuitOpen`
+immediately when open. Default `ShouldTrip` (nil) trips only on transport errors.
+
 ## Errors: the `svcerr` model
 
-- All application/transport errors are `*svcerr.Error` (`pkgs/ultis/svcerr`).
+- All application/transport errors are `*svcerr.Error` (`pkgs/utilities/svcerr`).
 - Use the predefined singletons in `common_err.go`
   (`ErrBadRequest`, `ErrInvalidParameters`, `ErrAlreadyExists`,
   `ErrRecordNotFound`, `ErrInternalServer`, …). Compare with `errors.Is` — they
@@ -229,10 +325,12 @@ func (h *Handler) CreateUser(c *echo.Context) error {
 - Map infra/GORM errors to a service error at the **app layer**, then log the
   raw cause with slog before returning a generic `ErrInternalServer`.
 - The Echo global error handler (`svcerr.ErrorHandlerEchoFn`, registered in
-  `internal/http.go`) renders any `*svcerr.Error` into the `response.BaseRes`
-  shape `{code, message, data}` with the right HTTP status.
-- Add new errors to `common_err.go`; never return raw infra errors from
-  handlers.
+  `internal/http.go`) resolves errors in this order:
+  1. `*svcerr.Error` — domain error: use `Status`, `Code`, `Message`.
+  2. `validator.ValidationErrors` — 400 + `InvalidArgument` code.
+  3. `echo.HTTPStatusCoder` — extract HTTP status via interface; respond with `http.StatusText(code)`.
+  4. Default — 500 Internal.
+- Add new errors to `common_err.go`; never return raw infra errors from handlers.
 
 ```go
 // shape of a service error
@@ -254,23 +352,37 @@ slog.Error("get user failed",
 	slog.String("error", err.Error()))
 ```
 
-The JSON handler is built in `pkgs/logger.NewJsonSlogHandler` and installed as
-the default logger in `internal/server.go`. Request logging uses Echo's
-`RequestLoggerWithConfig` emitting `slog.Attr` values.
+The JSON handler is built in `pkgs/logger.NewSlogLogger` and installed as
+the default logger in `internal/server.go`. go-redis internal pool logs are
+routed through slog at `Debug` level so they respect the configured log level.
 
 ## Wiring order (`internal/server.go`)
 
-`load config → set slog default → open ORM + Redis → NewXRepository(orm) →
-NewXApplication(repo) → NewXHandler(app) → router.RegisterRoutes`. Close DB/Redis
-on shutdown.
+```
+load config
+  → set slog default
+  → init OTel tracer (if enabled)
+  → open ORM (fatal on error)
+  → open Redis (warn on error, register failing probe checker)
+  → build readyProbe with registered checkers
+  → create Echo + newHttpServer
+  → NewXRepository(orm) → NewXApplication(repo) → NewXHandler(app)
+  → router.RegisterRoutes(echo, handler, readyProbe)
+  → NewWorkerGroup → register workers
+  → return Server{…}
+```
+
+Close DB/Redis/tracer on `Shutdown()`.
 
 ## Checklist: add a new domain `foo`
 
-1. `internal/domain/models/foo.go` (+ AutoMigrate entry in `pkgs/db/orm`).
+1. `internal/domain/models/foo.go` (GORM model).
 2. `internal/domain/dtos/foodtos/foo_dto.go` (req/res + mappers).
 3. `internal/infras/repository/foo/{repository.go (interface), repos_impl.go}`.
 4. `internal/app/foo/{application.go, command/*, query/*}` using the decorator aliases.
 5. `internal/handler/foo/handler.go` (+ `NewFooHandler`).
 6. Register routes in `internal/router/routes.go` and wire everything in `internal/server.go`.
-7. Add any new errors to `pkgs/ultis/svcerr/common_err.go`.
-8. Generate mocks + write black-box tests — see [Writing Tests (Go)](../writing-tests-go-projects/SKILL.md).
+7. If new infra dependency: register a checker on `readyProbe` in `server.go`.
+8. If outbound HTTP adapter: use `pkgs/httpclient` with `CBConfig`.
+9. Add any new errors to `pkgs/utilities/svcerr/common_err.go`.
+10. Generate mocks + write black-box tests — see [Writing Tests (Go)](../writing-tests-go-projects/SKILL.md).

@@ -55,7 +55,7 @@ import (
 	"github.com/<module>/internal/domain/dtos/userdtos"
 	"github.com/<module>/internal/domain/models"
 	repomock "github.com/<module>/internal/infras/repository/user/mock"
-	"github.com/<module>/pkgs/ultis/svcerr"
+	"github.com/<module>/pkgs/utilities/svcerr"
 )
 
 func TestCreateUserCommand_Handle(t *testing.T) {
@@ -114,7 +114,7 @@ func TestCreateUserCommand_Handle(t *testing.T) {
 - Use `require` for assertions that must stop the test (nil checks, fatal
   preconditions); use `assert` for follow-up checks.
 - Assert service errors with `errors.Is(err, svcerr.ErrXxx)` — they are pointer
-  singletons from `pkgs/ultis/svcerr/common_err.go`.
+  singletons from `pkgs/utilities/svcerr/common_err.go`.
 - Drive the repository with the generated mock's `EXPECT()` builder. Use `Run`
   to simulate side effects on pointer arguments, `mock.MatchedBy` to assert
   inputs, and `AssertNotCalled` for validation/short-circuit paths.
